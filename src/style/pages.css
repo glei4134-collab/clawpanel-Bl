@@ -1734,6 +1734,21 @@
   border-top: 1px solid var(--border-primary);
 }
 
+.ui-settings-custom-list {
+  margin-top: var(--space-sm);
+}
+
+.ui-settings-custom-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
 .btn-lg {
   padding: var(--space-sm) var(--space-xl);
   font-size: var(--text-base);

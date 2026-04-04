@@ -27,6 +27,7 @@ import './style/pages.css'
 import './style/chat.css'
 import './style/agents.css'
 import './style/debug.css'
+import './style/cursor.css'
 
 
 // 初始化主题 + 国际化
@@ -36,6 +37,82 @@ initI18n()
 // 初始化 UI 自定义（背景、透明度、点击音效）
 applyUIConfig()
 setupClickSounds()
+
+// === 光标尾巴特效 ===
+let _cursorTrailEnabled = false
+let _cursorTrailConfig = null
+let _cursorTrailThrottle = null
+const _cursorTrailContainer = document.createElement('div')
+_cursorTrailContainer.className = 'cursor-trail-container'
+document.body.appendChild(_cursorTrailContainer)
+
+function getCursorTrailConfig() {
+  try {
+    const saved = localStorage.getItem('ui_cursor_trail')
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return null
+}
+
+function saveCursorTrailConfig(config) {
+  localStorage.setItem('ui_cursor_trail', JSON.stringify(config))
+  _cursorTrailConfig = config
+  _cursorTrailEnabled = config.enabled
+}
+
+function initCursorTrail() {
+  _cursorTrailConfig = getCursorTrailConfig() || { enabled: false, color: '#6366f1', size: 8, density: 3 }
+  _cursorTrailEnabled = _cursorTrailConfig.enabled
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!_cursorTrailEnabled) return
+    if (e.target.closest('.no-cursor-trail')) return
+    
+    // 节流：每16ms最多执行一次（约60fps）
+    if (_cursorTrailThrottle) return
+    _cursorTrailThrottle = requestAnimationFrame(() => {
+      _cursorTrailThrottle = null
+      const density = _cursorTrailConfig.density || 3
+      for (let i = 0; i < density; i++) {
+        createTrailParticle(e.clientX, e.clientY)
+      }
+    })
+  }, { passive: true })
+}
+
+function createTrailParticle(x, y) {
+  // 限制最大粒子数，防止性能问题
+  if (_cursorTrailContainer.children.length > 50) return
+  
+  const particle = document.createElement('div')
+  particle.className = 'cursor-trail-particle'
+  
+  const size = _cursorTrailConfig.size || 8
+  const color = _cursorTrailConfig.color || '#6366f1'
+  
+  particle.style.cssText = `
+    left: ${x - size / 2}px;
+    top: ${y - size / 2}px;
+    width: ${size}px;
+    height: ${size}px;
+    background: ${color};
+    box-shadow: 0 0 ${size * 2}px ${color};
+  `
+  
+  _cursorTrailContainer.appendChild(particle)
+  
+  setTimeout(() => {
+    if (particle.parentNode) particle.remove()
+  }, 800)
+}
+
+window.__setCursorTrail = (config) => {
+  saveCursorTrailConfig(config)
+}
+
+window.__getCursorTrail = () => _cursorTrailConfig
+
+initCursorTrail()
 
 // 显示版本信息
 setTimeout(() => toast(`Gl v${APP_VERSION}`, 'info', { duration: 5000 }), 500)

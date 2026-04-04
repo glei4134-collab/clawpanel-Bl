@@ -278,6 +278,81 @@ export function getSoundPresets() {
   }))
 }
 
+export function importCustomSound(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const arrayBuffer = e.target.result
+        const config = getUIConfig()
+        config.customSoundData = arrayBuffer
+        config.soundPreset = 'custom'
+        saveUIConfig(config)
+        
+        if (_audioContext) {
+          _audioContext.decodeAudioData(arrayBuffer.slice(0), (buffer) => {
+            _clickBuffer = buffer
+          }, (err) => {
+            console.warn('Failed to decode audio:', err)
+          })
+        }
+        resolve({ name: file.name, duration: buffer?.duration })
+      } catch (err) {
+        reject(err)
+      }
+    }
+    reader.onerror = reject
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+export function getCustomBubbleStyles() {
+  try {
+    const data = localStorage.getItem('gl_custom_bubbles')
+    return data ? JSON.parse(data) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveCustomBubbleStyle(name, style) {
+  const bubbles = getCustomBubbleStyles()
+  bubbles[name] = style
+  localStorage.setItem('gl_custom_bubbles', JSON.stringify(bubbles))
+}
+
+export function deleteCustomBubbleStyle(name) {
+  const bubbles = getCustomBubbleStyles()
+  delete bubbles[name]
+  localStorage.setItem('gl_custom_bubbles', JSON.stringify(bubbles))
+}
+
+export function getAllBubbleStyles() {
+  const builtIn = getAvailableBubbleStyles()
+  const custom = getCustomBubbleStyles()
+  const customStyles = Object.keys(custom).map(key => ({
+    id: key,
+    name: custom[key].name || key,
+    isCustom: true
+  }))
+  return [...builtIn, ...customStyles]
+}
+
+export function getBubbleStyleById(name) {
+  if (BUBBLE_STYLES[name]) {
+    return BUBBLE_STYLES[name]
+  }
+  const custom = getCustomBubbleStyles()
+  return custom[name] || BUBBLE_STYLES.modern
+}
+
+export function getSoundPresets() {
+  return Object.keys(SOUND_PRESETS).map(key => ({
+    id: key,
+    name: SOUND_PRESETS[key].name
+  }))
+}
+
 function createClickSoundBuffer(ctx, preset = 'click') {
   const creator = SOUND_PRESETS[preset] || SOUND_PRESETS.click
   return creator.create(ctx)

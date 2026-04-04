@@ -3,7 +3,7 @@
  */
 
 import { t } from '../lib/i18n.js'
-import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine } from '../lib/ui-custom.js'
+import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, importCustomSound } from '../lib/ui-custom.js'
 import { toast } from '../components/toast.js'
 
 export async function render() {
@@ -11,7 +11,7 @@ export async function render() {
   page.className = 'page ui-settings-page'
   
   const config = getUIConfig()
-  const bubbleStyles = getAvailableBubbleStyles()
+  const bubbleStyles = getAllBubbleStyles()
   const soundPresets = [
     { id: 'click', name: '清脆' },
     { id: 'pop', name: '气泡' },
@@ -19,6 +19,8 @@ export async function render() {
     { id: 'bell', name: '铃铛' },
     { id: 'none', name: '无' }
   ]
+  
+  const customSounds = config.customSoundData ? [{ id: 'custom', name: '自定义音效' }] : []
 
   page.innerHTML = `
     <div class="page-header">
@@ -176,9 +178,22 @@ export async function render() {
           <div class="ui-settings-row">
             <label>气泡风格</label>
             <select onchange="applyBubbleStyle(this.value); this.nextElementSibling.textContent = this.options[this.selectedIndex].text" class="ui-settings-select">
-              ${bubbleStyles.map(s => `<option value="${s.id}" ${config.bubbleStyle === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+              ${bubbleStyles.map(s => `<option value="${s.id}" ${config.bubbleStyle === s.id ? 'selected' : ''}>${s.name}${s.isCustom ? ' ⭐' : ''}</option>`).join('')}
             </select>
-            <span class="ui-settings-value">${getBubbleStyle(config.bubbleStyle || 'modern').name}</span>
+            <span class="ui-settings-value">${getBubbleStyleById(config.bubbleStyle || 'modern').name}</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>导入气泡</label>
+            <input type="file" id="ui-bubble-import" accept=".json" style="display:none" onchange="handleBubbleImport(this.files[0])">
+            <button class="btn btn-sm btn-secondary" onclick="this.previousElementSibling.click()">选择 JSON</button>
+          </div>
+          <div id="ui-custom-bubbles-list" class="ui-settings-custom-list">
+            ${Object.keys(getCustomBubbleStyles()).map(name => `
+              <div class="ui-settings-custom-item">
+                <span>${getCustomBubbleStyles()[name].name || name}</span>
+                <button class="btn btn-sm btn-ghost" onclick="handleDeleteBubble('${name}')">删除</button>
+              </div>
+            `).join('')}
           </div>
         </div>
       </div>
@@ -194,7 +209,13 @@ export async function render() {
             <label>音效预设</label>
             <select onchange="applySoundPreset(this.value)" class="ui-settings-select">
               ${soundPresets.map(s => `<option value="${s.id}" ${config.soundPreset === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+              ${customSounds.map(s => `<option value="${s.id}" ${config.soundPreset === s.id ? 'selected' : ''}>${s.name} ⭐</option>`).join('')}
             </select>
+          </div>
+          <div class="ui-settings-row">
+            <label>导入音效</label>
+            <input type="file" id="ui-sound-import" accept="audio/*" style="display:none" onchange="handleSoundImport(this.files[0])">
+            <button class="btn btn-sm btn-secondary" onclick="this.previousElementSibling.click()">选择音频</button>
           </div>
           <div class="ui-settings-row">
             <label>音量</label>
@@ -264,6 +285,41 @@ function clearBgImage() {
   }
 }
 
+async function handleBubbleImport(file) {
+  if (!file) return
+  try {
+    const text = await file.text()
+    const style = JSON.parse(text)
+    if (!style.name || !style.userBg) {
+      toast('无效的气泡样式文件', 'warning')
+      return
+    }
+    const name = style.name + '_custom'
+    saveCustomBubbleStyle(name, { ...style, name: style.name + ' (自定义)' })
+    toast('气泡样式导入成功', 'success')
+    window.location.reload()
+  } catch (e) {
+    toast('导入失败：' + e.message, 'warning')
+  }
+}
+
+function handleDeleteBubble(name) {
+  deleteCustomBubbleStyle(name)
+  toast('已删除自定义气泡', 'success')
+  window.location.reload()
+}
+
+async function handleSoundImport(file) {
+  if (!file) return
+  try {
+    await importCustomSound(file)
+    toast('音效导入成功', 'success')
+    window.location.reload()
+  } catch (e) {
+    toast('导入失败：' + e.message, 'warning')
+  }
+}
+
 // 绑定到 window
 window.applyGlobalAlpha = applyGlobalAlpha
 window.applyNavSidebarFine = applyNavSidebarFine
@@ -286,3 +342,6 @@ window.applySoundVolume = applySoundVolume
 window.handleBgImageSelect = handleBgImageSelect
 window.handleSaveBgImage = handleSaveBgImage
 window.clearBgImage = clearBgImage
+window.handleBubbleImport = handleBubbleImport
+window.handleDeleteBubble = handleDeleteBubble
+window.handleSoundImport = handleSoundImport
