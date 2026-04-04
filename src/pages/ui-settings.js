@@ -64,6 +64,13 @@ export async function render() {
                    id="ui-global-alpha">
             <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}%</span>
           </div>
+          <div class="ui-settings-row">
+            <label>面板透明</label>
+            <input type="range" min="0" max="100" value="${Math.round((config.cardAlpha ?? 0.85) * 100)}" 
+                   oninput="applyCardAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   id="ui-card-alpha">
+            <span class="ui-settings-value">${Math.round((config.cardAlpha ?? 0.85) * 100)}%</span>
+          </div>
         </div>
       </div>
 
@@ -285,6 +292,56 @@ export async function render() {
       <button class="btn btn-primary btn-lg" onclick="saveAllUISettings()">保存全部设置</button>
     </div>
   `
+  
+  // 初始化自定义下拉选择器
+  setTimeout(() => {
+    const bubbleSelectEl = document.getElementById('ui-bubble-select')
+    if (bubbleSelectEl) {
+      const bubbleSelect = createCustomSelect(
+        bubbleStyles.map(s => ({ value: s.id, label: s.name + (s.isCustom ? ' ⭐' : '') })),
+        {
+          value: config.bubbleStyle || 'modern',
+          placeholder: '请选择气泡风格',
+          onchange: (val) => applyBubbleStyle(val)
+        }
+      )
+      bubbleSelectEl.appendChild(bubbleSelect.container)
+    }
+    
+    const soundSelectEl = document.getElementById('ui-sound-select')
+    if (soundSelectEl) {
+      const allSoundPresets = [
+        ...soundPresets,
+        ...customSounds.map(s => ({ ...s, label: s.name + ' ⭐' }))
+      ]
+      const soundSelect = createCustomSelect(
+        allSoundPresets.map(s => ({ value: s.id, label: s.name })),
+        {
+          value: config.soundPreset || 'click',
+          placeholder: '请选择音效',
+          onchange: (val) => applySoundPreset(val)
+        }
+      )
+      soundSelectEl.appendChild(soundSelect.container)
+    }
+    
+    const clickEffectTypeEl = document.getElementById('ui-click-effect-type-select')
+    if (clickEffectTypeEl) {
+      const clickEffectSelect = createCustomSelect(
+        [
+          { value: 'ripple', label: '涟漪' },
+          { value: 'burst', label: '爆发' },
+          { value: 'star', label: '星星' }
+        ],
+        {
+          value: window.__getClickEffect()?.type || 'ripple',
+          placeholder: '请选择类型',
+          onchange: (val) => handleClickEffectType(val)
+        }
+      )
+      clickEffectTypeEl.appendChild(clickEffectSelect.container)
+    }
+  }, 0)
   
   return page
 }
