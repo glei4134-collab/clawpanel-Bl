@@ -34,7 +34,7 @@
 
 /* 卡片 */
 .card {
-  background: var(--bg-card);
+  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
