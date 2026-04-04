@@ -1,12 +1,8 @@
 # 安全政策
 
-## 支持的版本
+## 关于本版本
 
-| 版本 | 支持状态 |
-|------|----------|
-| 0.5.x | ✅ 安全更新 |
-| 0.4.x | ⚠️ 仅关键修复 |
-| < 0.4 | ❌ 不再维护 |
+ClawPanel-Bl 是 [ClawPanel](https://github.com/qingchencloud/clawpanel) 的魔改版本。
 
 ## 报告安全漏洞
 
@@ -14,8 +10,8 @@
 
 请通过以下方式私下报告：
 
-1. 发送邮件至项目维护者（在 GitHub 个人主页查看联系方式）
-2. 或使用 [GitHub Security Advisories](https://github.com/qingchencloud/clawpanel/security/advisories/new) 私下报告
+1. 在本仓库发起 Security Advisory
+2. 或联系原始项目 [qingchencloud/clawpanel](https://github.com/qingchencloud/clawpanel/security/advisories/new)
 
 ### 报告内容应包含
 
@@ -33,8 +29,12 @@
 
 ## 安全最佳实践
 
-使用 ClawPanel 时，建议注意以下安全事项：
+- API Key 存储在本地，勿在公开场所泄露
+- 建议为 OpenClaw 数据目录设置适当权限
+- 多人共用时使用独立实例
+- 定期更新到最新版本
 
-- **Gateway Token**：如果开启局域网共享，务必设置访问密钥
-- **网络访问**：默认仅监听本机（loopback），如无必要不要开启局域网模式
-- **API Key**：模型服务商的 API Key 存储在本地 `openclaw.json` 中，请确保文件权限安全
+## 已知限制
+
+- 本应用设计用于本地网络管理
+- 公网部署请务必配置访问密码和防火墙
