@@ -114,6 +114,70 @@ window.__getCursorTrail = () => _cursorTrailConfig
 
 initCursorTrail()
 
+// === 点击特效 ===
+let _clickEffectConfig = null
+let _clickEffectThrottle = null
+
+function getClickEffectConfig() {
+  try {
+    const saved = localStorage.getItem('ui_click_effect')
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return null
+}
+
+function saveClickEffectConfig(config) {
+  localStorage.setItem('ui_click_effect', JSON.stringify(config))
+  _clickEffectConfig = config
+}
+
+function initClickEffect() {
+  _clickEffectConfig = getClickEffectConfig() || { enabled: false, type: 'ripple', color: '#6366f1' }
+  
+  document.addEventListener('mousedown', (e) => {
+    if (!_clickEffectConfig.enabled) return
+    if (e.target.closest('.no-click-effect')) return
+    
+    // 节流：每次点击最多一个特效
+    if (_clickEffectThrottle) return
+    _clickEffectThrottle = setTimeout(() => { _clickEffectThrottle = null }, 50)
+    
+    createClickEffect(e.clientX, e.clientY)
+  }, { passive: true })
+}
+
+function createClickEffect(x, y) {
+  const type = _clickEffectConfig.type || 'ripple'
+  const effect = document.createElement('div')
+  effect.className = `cursor-click-effect ${type}`
+  
+  const color = _clickEffectConfig.color || '#6366f1'
+  document.documentElement.style.setProperty('--click-effect-color', color)
+  
+  effect.style.cssText = `
+    left: ${x}px;
+    top: ${y}px;
+  `
+  
+  if (type === 'star') {
+    effect.textContent = '✨'
+  }
+  
+  _cursorTrailContainer.appendChild(effect)
+  
+  setTimeout(() => {
+    if (effect.parentNode) effect.remove()
+  }, 600)
+}
+
+window.__setClickEffect = (config) => {
+  saveClickEffectConfig(config)
+}
+
+window.__getClickEffect = () => _clickEffectConfig
+
+initClickEffect()
+
 // 显示版本信息
 setTimeout(() => toast(`Gl v${APP_VERSION}`, 'info', { duration: 5000 }), 500)
 
