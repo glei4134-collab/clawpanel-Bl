@@ -1118,6 +1118,34 @@ function showUISettingsPanel() {
         </div>
       </div>
       <div class="ui-settings-section">
+        <div class="ui-settings-section-title">模糊度细调</div>
+        <div class="ui-settings-row">
+          <label>侧边栏</label>
+          <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarBlurFine ?? 0) * 100)}" oninput="applyNavSidebarBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
+          <span>${(config.navSidebarBlurFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarBlurFine ?? 0) * 100}%</span>
+        </div>
+        <div class="ui-settings-row">
+          <label>主区域</label>
+          <input type="range" min="-100" max="100" value="${Math.round((config.mainBlurFine ?? 0) * 100)}" oninput="applyMainBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
+          <span>${(config.mainBlurFine ?? 0) > 0 ? '+' : ''}${(config.mainBlurFine ?? 0) * 100}%</span>
+        </div>
+        <div class="ui-settings-row">
+          <label>消息区域</label>
+          <input type="range" min="-100" max="100" value="${Math.round((config.messagesBlurFine ?? 0) * 100)}" oninput="applyMessagesBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
+          <span>${(config.messagesBlurFine ?? 0) > 0 ? '+' : ''}${(config.messagesBlurFine ?? 0) * 100}%</span>
+        </div>
+        <div class="ui-settings-row">
+          <label>会话列表</label>
+          <input type="range" min="-100" max="100" value="${Math.round((config.sessionBlurFine ?? 0) * 100)}" oninput="applySessionBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
+          <span>${(config.sessionBlurFine ?? 0) > 0 ? '+' : ''}${(config.sessionBlurFine ?? 0) * 100}%</span>
+        </div>
+        <div class="ui-settings-row">
+          <label>输入区域</label>
+          <input type="range" min="-100" max="100" value="${Math.round((config.inputBlurFine ?? 0) * 100)}" oninput="applyInputBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
+          <span>${(config.inputBlurFine ?? 0) > 0 ? '+' : ''}${(config.inputBlurFine ?? 0) * 100}%</span>
+        </div>
+      </div>
+      <div class="ui-settings-section">
         <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="saveAllUISettings()">保存全部设置</button>
       </div>
     </div>
