@@ -318,14 +318,6 @@ async function handleInstallCftunnel(page) {
     progressText.innerHTML = `${statusIcon('err', 14)} ${t('ext.installFailed')}`
     logBox.textContent += '\n' + t('ext.error') + ': ' + e
     toast(t('ext.installFailed') + ': ' + e, 'error')
-    if (window.__openAIDrawerWithError) {
-      window.__openAIDrawerWithError({
-        title: t('ext.installFailedTitle', { name: 'cftunnel' }),
-        error: logBox.textContent,
-        scene: t('ext.installScene', { name: 'cftunnel' }),
-        hint: String(e),
-      })
-    }
   } finally {
     unlistenLog?.()
     unlistenProgress?.()
@@ -383,14 +375,6 @@ async function handleInstallClawapp(page) {
     progressText.innerHTML = `${statusIcon('err', 14)} ${t('ext.installFailed')}`
     logBox.textContent += '\n' + t('ext.error') + ': ' + e
     toast(t('ext.installFailed') + ': ' + e, 'error')
-    if (window.__openAIDrawerWithError) {
-      window.__openAIDrawerWithError({
-        title: t('ext.installFailedTitle', { name: 'ClawApp' }),
-        error: logBox.textContent,
-        scene: t('ext.installScene', { name: 'ClawApp' }),
-        hint: String(e),
-      })
-    }
   } finally {
     unlistenLog?.()
     unlistenProgress?.()

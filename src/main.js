@@ -740,10 +740,8 @@ async function checkGlobalUpdate() {
           ${changelog ? `<span class="update-banner-changelog">· ${changelog}</span>` : ''}
         </div>
         ${isWeb
-          ? `<button class="btn btn-sm" id="btn-update-show-cmd">${t('about.updateMethod')}</button>
-             <a class="btn btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener">${t('about.releaseNotes')}</a>`
-          : `<button class="btn btn-sm" id="btn-update-hot">${t('about.hotUpdate')}</button>
-             <a class="btn btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener">${t('about.fullInstaller')}</a>`
+          ? `<button class="btn btn-sm" id="btn-update-show-cmd">${t('about.updateMethod')}</button>`
+          : `<button class="btn btn-sm" id="btn-update-hot">${t('about.hotUpdate')}</button>`
         }
         <button class="update-banner-close" id="btn-update-dismiss" title="${t('about.dismissVersion')}">✕</button>
       </div>

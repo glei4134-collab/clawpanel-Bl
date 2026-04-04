@@ -1,6 +1,6 @@
 /**
  * 共享模型预设配置
- * models.js 和 assistant.js 共用，只需维护一套数据
+ * models.js 共用，只需维护一套数据
  */
 
 // API 接口类型选项

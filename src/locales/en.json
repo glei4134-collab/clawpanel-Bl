@@ -1434,7 +1434,7 @@
     "hostedBadge": "Hosted",
     "taskGoal": "Task Goal",
     "taskGoalPlaceholder": "e.g. Continuously optimize code quality until no improvements remain",
-    "hostedHint": "Hosted Agent will continuously guide OpenClaw to complete this goal. Uses <a href=\"#/assistant\" class=\"hosted-agent-link\">AI Assistant</a> model config.",
+    "hostedHint": "Hosted Agent will continuously guide OpenClaw to complete this goal.",
     "maxReplies": "Max Replies",
     "timerAutoStop": "Auto-stop Timer",
     "startHosted": "Start Hosted",

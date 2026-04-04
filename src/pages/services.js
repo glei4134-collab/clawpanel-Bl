@@ -927,9 +927,6 @@ async function doUpgradeWithModal(source, page, version = null, method = 'auto')
         if (diagnosis.hint) modal.appendLog('')
         if (diagnosis.hint) modal.appendHtmlLog(`${statusIcon('info', 14)} ${diagnosis.hint}`)
         if (diagnosis.command) modal.appendHtmlLog(`${icon('clipboard', 14)} ${diagnosis.command}`)
-        if (window.__openAIDrawerWithError) {
-          window.__openAIDrawerWithError({ title: diagnosis.title, error: fullLog, scene: t('services.upgradeScene'), hint: diagnosis.hint })
-        }
       })
 
       // 发起后台任务（立即返回）

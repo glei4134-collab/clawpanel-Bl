@@ -473,13 +473,6 @@ function bindEvents(page) {
       case 'skill-uninstall':
         await handleSkillUninstall(page, btn)
         break
-      case 'skill-ai-fix':
-        window.location.hash = '#/assistant'
-        setTimeout(() => {
-          const skillBtn = document.querySelector('.ast-skill-card[data-skill="skills-manager"]')
-          if (skillBtn) skillBtn.click()
-        }, 500)
-        break
     }
   })
 
