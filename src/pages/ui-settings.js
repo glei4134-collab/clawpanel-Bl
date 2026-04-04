@@ -500,3 +500,10 @@ function handleClickEffectColor(color) {
   const config = window.__getClickEffect() || {}
   window.__setClickEffect({ ...config, color })
 }
+
+function saveAllUISettings() {
+  saveUIConfig(getUIConfig())
+  toast('UI设置已保存', 'success')
+}
+
+window.saveAllUISettings = saveAllUISettings
