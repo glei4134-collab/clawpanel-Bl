@@ -153,4 +153,6 @@
   --cursor-grab: grab;
   --cursor-crosshair: crosshair;
   --cursor-text: text;
+  
+  --ui-card-alpha: 0.85;
 }

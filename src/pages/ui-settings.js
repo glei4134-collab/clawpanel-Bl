@@ -3,7 +3,7 @@
  */
 
 import { t } from '../lib/i18n.js'
-import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, importCustomSound } from '../lib/ui-custom.js'
+import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, applyCardAlpha, importCustomSound } from '../lib/ui-custom.js'
 import { toast } from '../components/toast.js'
 
 export async function render() {
@@ -62,6 +62,13 @@ export async function render() {
                    oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
                    id="ui-global-alpha">
             <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>面板透明</label>
+            <input type="range" min="30" max="100" value="${Math.round((config.cardAlpha ?? 0.85) * 100)}" 
+                   oninput="applyCardAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   id="ui-card-alpha">
+            <span class="ui-settings-value">${Math.round((config.cardAlpha ?? 0.85) * 100)}%</span>
           </div>
         </div>
       </div>
@@ -214,6 +221,70 @@ export async function render() {
           </div>
         </div>
       </div>
+
+      <!-- 光标尾巴设置 -->
+      <div class="ui-settings-card">
+        <div class="ui-settings-card-header">
+          <span class="ui-settings-card-icon">✨</span>
+          <h3>光标尾巴</h3>
+        </div>
+        <div class="ui-settings-card-body">
+          <div class="ui-settings-row">
+            <label>启用</label>
+            <label class="ui-settings-toggle">
+              <input type="checkbox" id="ui-cursor-trail-enabled" ${(window.__getCursorTrail()?.enabled ? 'checked' : '')} onchange="handleCursorTrailToggle(this.checked)">
+              <span class="ui-settings-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="ui-settings-row">
+            <label>颜色</label>
+            <input type="color" id="ui-cursor-trail-color" value="${window.__getCursorTrail()?.color || '#6366f1'}" onchange="handleCursorTrailColor(this.value)">
+          </div>
+          <div class="ui-settings-row">
+            <label>大小</label>
+            <input type="range" min="4" max="16" value="${window.__getCursorTrail()?.size || 8}" 
+                   oninput="handleCursorTrailSize(this.value); this.nextElementSibling.textContent = this.value + 'px'"
+                   id="ui-cursor-trail-size">
+            <span class="ui-settings-value">${window.__getCursorTrail()?.size || 8}px</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>密度</label>
+            <input type="range" min="1" max="5" value="${window.__getCursorTrail()?.density || 3}" 
+                   oninput="handleCursorTrailDensity(this.value); this.nextElementSibling.textContent = this.value"
+                   id="ui-cursor-trail-density">
+            <span class="ui-settings-value">${window.__getCursorTrail()?.density || 3}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 点击特效设置 -->
+      <div class="ui-settings-card">
+        <div class="ui-settings-card-header">
+          <span class="ui-settings-card-icon">👆</span>
+          <h3>点击特效</h3>
+        </div>
+        <div class="ui-settings-card-body">
+          <div class="ui-settings-row">
+            <label>启用</label>
+            <label class="ui-settings-toggle">
+              <input type="checkbox" id="ui-click-effect-enabled" ${(window.__getClickEffect()?.enabled ? 'checked' : '')} onchange="handleClickEffectToggle(this.checked)">
+              <span class="ui-settings-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="ui-settings-row">
+            <label>类型</label>
+            <select id="ui-click-effect-type" onchange="handleClickEffectType(this.value)" class="ui-settings-select">
+              <option value="ripple" ${window.__getClickEffect()?.type === 'ripple' ? 'selected' : ''}>涟漪</option>
+              <option value="burst" ${window.__getClickEffect()?.type === 'burst' ? 'selected' : ''}>爆发</option>
+              <option value="star" ${window.__getClickEffect()?.type === 'star' ? 'selected' : ''}>星星</option>
+            </select>
+          </div>
+          <div class="ui-settings-row">
+            <label>颜色</label>
+            <input type="color" id="ui-click-effect-color" value="${window.__getClickEffect()?.color || '#6366f1'}" onchange="handleClickEffectColor(this.value)">
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="ui-settings-footer">
@@ -325,6 +396,7 @@ window.applyBgBlur = applyBgBlur
 window.applyBgBrightness = applyBgBrightness
 window.applyBgImage = applyBgImage
 window.applyBubbleStyle = applyBubbleStyle
+window.applyCardAlpha = applyCardAlpha
 window.applySoundPreset = applySoundPreset
 window.applySoundVolume = applySoundVolume
 window.handleBgImageSelect = handleBgImageSelect
@@ -333,3 +405,47 @@ window.clearBgImage = clearBgImage
 window.handleBubbleImport = handleBubbleImport
 window.handleDeleteBubble = handleDeleteBubble
 window.handleSoundImport = handleSoundImport
+window.handleCursorTrailToggle = handleCursorTrailToggle
+window.handleCursorTrailColor = handleCursorTrailColor
+window.handleCursorTrailSize = handleCursorTrailSize
+window.handleCursorTrailDensity = handleCursorTrailDensity
+window.handleClickEffectToggle = handleClickEffectToggle
+window.handleClickEffectType = handleClickEffectType
+window.handleClickEffectColor = handleClickEffectColor
+
+// 光标尾巴设置处理函数
+function handleCursorTrailToggle(enabled) {
+  const config = window.__getCursorTrail() || {}
+  window.__setCursorTrail({ ...config, enabled })
+}
+
+function handleCursorTrailColor(color) {
+  const config = window.__getCursorTrail() || {}
+  window.__setCursorTrail({ ...config, color })
+}
+
+function handleCursorTrailSize(size) {
+  const config = window.__getCursorTrail() || {}
+  window.__setCursorTrail({ ...config, size: parseInt(size) })
+}
+
+function handleCursorTrailDensity(density) {
+  const config = window.__getCursorTrail() || {}
+  window.__setCursorTrail({ ...config, density: parseInt(density) })
+}
+
+// 点击特效设置处理函数
+function handleClickEffectToggle(enabled) {
+  const config = window.__getClickEffect() || {}
+  window.__setClickEffect({ ...config, enabled })
+}
+
+function handleClickEffectType(type) {
+  const config = window.__getClickEffect() || {}
+  window.__setClickEffect({ ...config, type })
+}
+
+function handleClickEffectColor(color) {
+  const config = window.__getClickEffect() || {}
+  window.__setClickEffect({ ...config, color })
+}

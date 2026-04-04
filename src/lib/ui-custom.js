@@ -40,6 +40,7 @@ const DEFAULT_CONFIG = {
   clickSoundVolume: 0.6,
   bubbleStyle: 'modern',
   bubbleAnimation: true,
+  cardAlpha: 0.85,
 }
 
 let _audioContext = null
@@ -831,4 +832,11 @@ export function applyInputBlurFine(val) {
   config.inputBlurFine = val / 100
   saveUIConfig(config)
   applyUIConfig(config)
+}
+
+export function applyCardAlpha(val) {
+  const config = getUIConfig()
+  config.cardAlpha = val / 100
+  saveUIConfig(config)
+  document.documentElement.style.setProperty('--ui-card-alpha', config.cardAlpha)
 }
