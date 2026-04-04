@@ -21,7 +21,6 @@ const DEFAULT_CONFIG = {
   sessionListAlpha: 0.0,
   inputAlpha: 0.0,
   contentAlpha: 0.15,
-  cardAlpha: 0.2,
   globalAlpha: 0.0,
   sidebarFine: 0,
   navSidebarFine: 0,
@@ -49,13 +48,12 @@ let _currentConfig = null
 let _audioInitialized = false
 
 export function getUIConfig() {
-  if (!_currentConfig) {
-    try {
-      const saved = localStorage.getItem(UI_CONFIG_KEY)
-      _currentConfig = saved ? { ...DEFAULT_CONFIG, ...JSON.parse(saved) } : { ...DEFAULT_CONFIG }
-    } catch {
-      _currentConfig = { ...DEFAULT_CONFIG }
-    }
+  // 强制每次都从 localStorage 读取最新配置
+  try {
+    const saved = localStorage.getItem(UI_CONFIG_KEY)
+    _currentConfig = saved ? { ...DEFAULT_CONFIG, ...JSON.parse(saved) } : { ...DEFAULT_CONFIG }
+  } catch {
+    _currentConfig = { ...DEFAULT_CONFIG }
   }
   // 每次都从 gl_bg_image 加载背景图片（避免缓存问题）
   try {
@@ -209,6 +207,10 @@ export function applyUIConfig(config) {
   document.documentElement.style.setProperty('--bubble-assistant-color', bubbleStyle.assistantColor)
   document.documentElement.style.setProperty('--bubble-assistant-shadow', bubbleStyle.assistantShadow)
   document.documentElement.style.setProperty('--bubble-assistant-radius', bubbleStyle.borderRadius)
+
+  // 应用卡片透明度
+  const cardAlpha = config.cardAlpha ?? 0.85
+  document.documentElement.style.setProperty('--ui-card-alpha', cardAlpha)
 }
 
 const SOUND_PRESETS = {
