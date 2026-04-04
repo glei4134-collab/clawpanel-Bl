@@ -59,10 +59,10 @@ export async function render() {
           </div>
           <div class="ui-settings-row">
             <label>全局透明</label>
-            <input type="range" min="0" max="100" value="${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}" 
+            <input type="range" min="0" max="100" value="${Math.round((config.globalAlpha ?? 0) * 100)}" 
                    oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
                    id="ui-global-alpha">
-            <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}%</span>
+            <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100)}%</span>
           </div>
           <div class="ui-settings-row">
             <label>面板透明</label>
@@ -173,9 +173,7 @@ export async function render() {
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
             <label>气泡风格</label>
-            <select onchange="applyBubbleStyle(this.value); this.nextElementSibling.textContent = this.options[this.selectedIndex].text" class="ui-settings-select">
-              ${bubbleStyles.map(s => `<option value="${s.id}" ${config.bubbleStyle === s.id ? 'selected' : ''}>${s.name}${s.isCustom ? ' ⭐' : ''}</option>`).join('')}
-            </select>
+            <div id="ui-bubble-select" class="custom-select-wrapper"></div>
             <span class="ui-settings-value">${getBubbleStyleById(config.bubbleStyle || 'modern').name}</span>
           </div>
           <div class="ui-settings-row">
@@ -203,10 +201,7 @@ export async function render() {
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
             <label>音效预设</label>
-            <select onchange="applySoundPreset(this.value)" class="ui-settings-select">
-              ${soundPresets.map(s => `<option value="${s.id}" ${config.soundPreset === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
-              ${customSounds.map(s => `<option value="${s.id}" ${config.soundPreset === s.id ? 'selected' : ''}>${s.name} ⭐</option>`).join('')}
-            </select>
+            <div id="ui-sound-select" class="custom-select-wrapper"></div>
           </div>
           <div class="ui-settings-row">
             <label>导入音效</label>
@@ -274,11 +269,7 @@ export async function render() {
           </div>
           <div class="ui-settings-row">
             <label>类型</label>
-            <select id="ui-click-effect-type" onchange="handleClickEffectType(this.value)" class="ui-settings-select">
-              <option value="ripple" ${window.__getClickEffect()?.type === 'ripple' ? 'selected' : ''}>涟漪</option>
-              <option value="burst" ${window.__getClickEffect()?.type === 'burst' ? 'selected' : ''}>爆发</option>
-              <option value="star" ${window.__getClickEffect()?.type === 'star' ? 'selected' : ''}>星星</option>
-            </select>
+            <div id="ui-click-effect-type-select" class="custom-select-wrapper"></div>
           </div>
           <div class="ui-settings-row">
             <label>颜色</label>
@@ -502,8 +493,36 @@ function handleClickEffectColor(color) {
 }
 
 function saveAllUISettings() {
-  saveUIConfig(getUIConfig())
-  toast('UI设置已保存', 'success')
+  const config = getUIConfig()
+  
+  // 确保所有设置都被正确保存
+  saveUIConfig(config)
+  
+  // 重新应用所有 UI 设置
+  applyUIConfig()
+  
+  // 如果有自定义下拉组件，确保它们的值也保存了
+  if (window._bubbleSelect) {
+    const bubbleVal = window._bubbleSelect.getValue()
+    if (bubbleVal) applyBubbleStyle(bubbleVal)
+  }
+  if (window._soundSelect) {
+    const soundVal = window._soundSelect.getValue()
+    if (soundVal) applySoundPreset(soundVal)
+  }
+  if (window._clickEffectSelect) {
+    const clickType = window._clickEffectSelect.getValue()
+    if (clickType) handleClickEffectType(clickType)
+  }
+  
+  // 获取当前的透明度等设置并重新应用
+  const cursorTrailConfig = window.__getCursorTrail()
+  if (cursorTrailConfig) window.__setCursorTrail(cursorTrailConfig)
+  
+  const clickEffectConfig = window.__getClickEffect()
+  if (clickEffectConfig) window.__setClickEffect(clickEffectConfig)
+  
+  toast('UI设置已保存并应用', 'success')
 }
 
 window.saveAllUISettings = saveAllUISettings
