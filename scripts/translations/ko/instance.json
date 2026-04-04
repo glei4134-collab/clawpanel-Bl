@@ -1,0 +1,19 @@
+{
+  "local": "로컬",
+  "remote": "원격",
+  "docker": "Docker",
+  "switchHint": "전환 후 모델 설정, Agent 등의 페이지에서 해당 인스턴스를 관리합니다",
+  "addInstance": "인스턴스 추가",
+  "addRemote": "원격 인스턴스 추가",
+  "namePlaceholder": "원격 서버",
+  "nameLabel": "이름",
+  "endpointLabel": "패널 주소",
+  "gwPortLabel": "Gateway 포트 (선택)",
+  "nameRequired": "이름과 패널 주소를 입력하세요",
+  "endpointExists": "이 엔드포인트는 이미 존재합니다",
+  "adding": "추가 중...",
+  "switchedTo": "{name}(으)로 전환됨",
+  "current": "현재",
+  "remoteHint": "원격 서버에서 ClawPanel (serve.js)이 실행 중이어야 합니다.",
+  "example": "예시"
+}

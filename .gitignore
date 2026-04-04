@@ -1,0 +1,62 @@
+# 依赖
+node_modules/
+
+.cursor
+docs/issue-solutions.md
+# 构建产物
+dist/
+src-tauri/target/
+
+# 日志
+*.log
+tauri-dev.log
+api_doc_mcp.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# 构建临时文件
+nul
+release_body.md
+release_body.md.bak
+
+# 本地临时文件 / 设计文档 / 构建脚本
+.tmp/
+scripts/build-r2-archive.sh
+r2-archives/
+
+# 内部开发文档（不入公开仓）
+BLOCKING_ISSUES_REPORT.md
+__clawapp-chat-ref.js
+LOBSTER-LEGION-ARCHIVE.md
+
+# 大文件（宣传视频·原始版本）
+docs/promo-video.mp4
+
+# IDE / 编辑器
+.idea/
+*.iml
+.vscode/settings.json
+.vscode/launch.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rust 开发工具
+src-tauri/.cargo/
+.codex/
+# AI 上下文记忆
+.context.md
+CONTEXT_STATE.md
+PROJECT_CONTRACT.md
+project.yaml

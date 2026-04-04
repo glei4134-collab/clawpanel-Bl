@@ -1,0 +1,17 @@
+{
+  "title": "Registros",
+  "desc": "Ver registros del servicio OpenClaw",
+  "tabGateway": "Gateway",
+  "tabGatewayErr": "Errores Gateway",
+  "tabGuardian": "Guardian",
+  "tabBackup": "Respaldo",
+  "tabAudit": "Auditoría",
+  "searchPlaceholder": "Buscar...",
+  "refresh": "Actualizar",
+  "autoScroll": "Auto-desplazar",
+  "loading": "Cargando...",
+  "empty": "Sin registros",
+  "loadFailed": "Error al cargar",
+  "noResults": "Sin resultados",
+  "searchFailed": "Búsqueda fallida"
+}

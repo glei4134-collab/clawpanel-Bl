@@ -1,0 +1,19 @@
+{
+  "title": "Tareas programadas",
+  "desc": "Gestionar tareas programadas de OpenClaw",
+  "addTask": "+ Agregar tarea",
+  "noTasks": "Sin tareas",
+  "taskName": "Nombre de tarea",
+  "schedule": "Programación",
+  "status": "Estado",
+  "active": "Activa",
+  "inactive": "Inactiva",
+  "edit": "Editar",
+  "delete": "Eliminar",
+  "enable": "Habilitar",
+  "disable": "Deshabilitar",
+  "runNow": "Ejecutar ahora",
+  "created": "Tarea creada",
+  "deleted": "Tarea eliminada",
+  "loadFailed": "Error al cargar"
+}

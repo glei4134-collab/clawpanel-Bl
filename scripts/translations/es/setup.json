@@ -1,0 +1,23 @@
+{
+  "title": "Configuración inicial",
+  "desc": "Instalar y configurar OpenClaw",
+  "headerTitle": "Bienvenido a ClawPanel",
+  "recheck": "Verificar de nuevo",
+  "stepNode": "Entorno Node.js",
+  "installed": "Instalado",
+  "downloadNode": "Descargar Node.js",
+  "stepGit": "Git",
+  "stepConfig": "Archivo de configuración",
+  "saveBtn": "Guardar",
+  "resetDefaultBtn": "Restaurar predeterminado",
+  "aiAssistant": "Asistente IA",
+  "openAiAssistant": "Abrir asistente IA",
+  "nextStepsTitle": "Próximos pasos",
+  "configModels": "Configurar modelos",
+  "gatewaySetup": "Configurar Gateway",
+  "messageChannels": "Canales",
+  "enterPanel": "Entrar al panel",
+  "installBtn": "Instalación rápida",
+  "installOpenclaw": "Instalar OpenClaw",
+  "installComplete": "Instalación completada"
+}

@@ -1,0 +1,152 @@
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  background: transparent !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#ui-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('./images/bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-color: #0f172a;
+  pointer-events: none;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+/* Background is now set via JavaScript using #ui-bg-div */
+
+#sidebar, #content, #main-col {
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+#sidebar {
+  background: rgba(255, 255, 255, var(--alpha-nav-sidebar, 0.25)) !important;
+  backdrop-filter: blur(var(--blur-sidebar, 20px)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-sidebar, 20px)) saturate(150%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#content {
+  background: transparent !important;
+  backdrop-filter: blur(var(--blur-main, 10px)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--blur-main, 10px)) saturate(130%);
+}
+
+#main-col {
+  background: transparent !important;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(0.85);
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+  outline: none;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-color: var(--glass-border-strong);
+}
+
+input:hover, textarea:hover, select:hover {
+  background: var(--glass-bg);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+/* 卡片透明效果 */
+.card, .stat-card, .service-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* 输入框透明效果 */
+.form-input, .login-input {
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-color: var(--glass-border-strong);
+}
+
+.login-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}

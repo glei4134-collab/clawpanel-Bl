@@ -1,0 +1,8 @@
+{
+  "title": "Bảo mật",
+  "desc": "Quản lý cài đặt bảo mật OpenClaw",
+  "toolPermissions": "Quyền công cụ",
+  "savePermissions": "Lưu quyền",
+  "permSaved": "Quyền đã lưu",
+  "loadFailed": "Tải cài đặt thất bại"
+}

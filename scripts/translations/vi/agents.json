@@ -1,0 +1,23 @@
+{
+  "title": "Quản lý Agent",
+  "desc": "Tạo và quản lý OpenClaw Agent",
+  "addAgent": "+ Agent mới",
+  "noAgents": "Không có Agent",
+  "loadFailed": "Tải thất bại",
+  "default": "Mặc định",
+  "backup": "Sao lưu",
+  "edit": "Sửa",
+  "delete": "Xóa",
+  "notSet": "Chưa đặt",
+  "addTitle": "Agent mới",
+  "agentId": "Agent ID",
+  "agentName": "Tên",
+  "agentModel": "Mô hình",
+  "created": "Agent đã tạo",
+  "createFailed": "Tạo thất bại",
+  "editTitle": "Sửa Agent — {id}",
+  "updated": "Đã cập nhật",
+  "updateFailed": "Cập nhật thất bại",
+  "deleted": "Đã xóa",
+  "deleteFailed": "Xóa thất bại"
+}

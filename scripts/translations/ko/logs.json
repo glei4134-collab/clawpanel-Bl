@@ -1,0 +1,17 @@
+{
+  "title": "로그",
+  "desc": "OpenClaw 서비스 로그 보기",
+  "tabGateway": "Gateway 로그",
+  "tabGatewayErr": "Gateway 오류",
+  "tabGuardian": "가디언",
+  "tabBackup": "백업 로그",
+  "tabAudit": "감사 로그",
+  "searchPlaceholder": "로그 검색...",
+  "refresh": "새로고침",
+  "autoScroll": "자동 스크롤",
+  "loading": "로그 로딩 중...",
+  "empty": "로그 없음",
+  "loadFailed": "로그 로드 실패",
+  "noResults": "일치하는 결과 없음",
+  "searchFailed": "검색 실패"
+}
