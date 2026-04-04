@@ -1,0 +1,45 @@
+{
+  "name": "clawpanel-bl",
+  "version": "0.5.9-bl.1",
+  "private": true,
+  "description": "ClawPanel-Bl - 基于 ClawPanel 的魔改版本，专注 UI 自定义功能",
+  "type": "module",
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/glei4134-collab/clawpanel-Bl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/glei4134-collab/clawpanel-Bl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/glei4134-collab/clawpanel-Bl/issues"
+  },
+  "keywords": [
+    "clawpanel",
+    "openclaw",
+    "tauri",
+    "ui-custom"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "icon:regen": "tauri icon public/images/logo.png -o src-tauri/icons",
+    "serve": "node scripts/serve.js",
+    "version:sync": "node scripts/sync-version.js",
+    "version:set": "node scripts/sync-version.js"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/plugin-shell": "^2.2.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "jimp": "^1.6.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
+    "vite": "^6.3.5"
+  }
+}

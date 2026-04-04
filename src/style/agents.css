@@ -1,0 +1,338 @@
+/* Agent 管理页面样式 */
+.agent-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.agent-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.agent-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+.badge {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.badge-success {
+  background: var(--success-muted);
+  color: var(--success);
+}
+
+.agent-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.agent-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-info-row {
+  display: flex;
+  gap: 12px;
+  font-size: var(--font-size-sm);
+}
+
+.agent-info-label {
+  color: var(--text-tertiary);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.agent-info-value {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.page-subhint {
+  margin-top: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--accent);
+}
+
+/* ==================== Agent 详情页 ==================== */
+
+.agent-back-link {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  color: var(--accent);
+  text-decoration: none;
+  margin-bottom: 4px;
+  transition: color var(--transition-fast);
+}
+.agent-back-link:hover {
+  color: var(--accent-hover);
+}
+
+.agent-section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.agent-section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.agent-section-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0 0 16px 0;
+}
+
+.agent-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.agent-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .agent-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agent-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: 8px 0;
+}
+
+.agent-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+/* 文件卡片 */
+.agent-file-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color var(--transition-fast);
+}
+.agent-file-card:hover {
+  border-color: var(--border-focus);
+}
+
+.agent-file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.agent-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-file-name {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-file-status {
+  font-size: var(--font-size-xs);
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+.agent-file-status.file-exists {
+  background: var(--success-muted);
+  color: var(--success);
+}
+.agent-file-status.file-missing {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.agent-file-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+
+.agent-file-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.agent-file-actions {
+  flex-shrink: 0;
+}
+
+/* 文件编辑器弹窗 */
+.agent-file-editor-modal {
+  max-width: 800px !important;
+  width: 90vw;
+}
+
+.agent-file-editor {
+  width: 100%;
+  min-height: 400px;
+  max-height: 60vh;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  padding: 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+  tab-size: 2;
+}
+.agent-file-editor:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+/* 渠道绑定卡片 */
+.agent-binding-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.agent-binding-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-binding-channel {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.agent-binding-account {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.agent-channels-section {
+  max-width: 700px;
+}
+
+.agent-files-section {
+  max-width: 700px;
+}
+
+.agent-overview {
+  max-width: 700px;
+}
+
+.agent-multiline-input {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.agent-skills-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.agent-skill-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  cursor: pointer;
+}
+
+.agent-skill-card.is-muted {
+  opacity: 0.7;
+}
+
+.agent-skill-main {
+  flex: 1;
+}
+
+.agent-skill-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.agent-skill-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-skill-desc {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.agent-skill-badge {
+  font-size: var(--font-size-xs);
+  color: var(--warning);
+  background: var(--warning-muted);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+@media (max-width: 800px) {
+  .agent-skills-list {
+    grid-template-columns: 1fr;
+  }
+}

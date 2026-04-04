@@ -1,0 +1,19 @@
+{
+  "title": "Tâches planifiées",
+  "desc": "Gérer les tâches planifiées OpenClaw",
+  "addTask": "+ Ajouter une tâche",
+  "noTasks": "Aucune tâche",
+  "taskName": "Nom de la tâche",
+  "schedule": "Planification",
+  "status": "Statut",
+  "active": "Active",
+  "inactive": "Inactive",
+  "edit": "Modifier",
+  "delete": "Supprimer",
+  "enable": "Activer",
+  "disable": "Désactiver",
+  "runNow": "Exécuter maintenant",
+  "created": "Tâche créée",
+  "deleted": "Tâche supprimée",
+  "loadFailed": "Échec du chargement"
+}

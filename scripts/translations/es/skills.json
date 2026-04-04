@@ -1,0 +1,19 @@
+{
+  "title": "Skills",
+  "desc": "Gestionar e instalar OpenClaw Skills",
+  "installed": "Instalados",
+  "available": "Disponibles",
+  "noSkills": "Sin Skills",
+  "install": "Instalar",
+  "uninstall": "Desinstalar",
+  "update": "Actualizar",
+  "search": "Buscar Skills...",
+  "installing": "Instalando...",
+  "installSuccess": "Instalado",
+  "installFailed": "Error al instalar",
+  "loadFailed": "Error al cargar",
+  "noResults": "Sin resultados",
+  "refreshList": "Actualizar lista",
+  "checkUpdates": "Buscar actualizaciones",
+  "noUpdates": "Todo actualizado"
+}

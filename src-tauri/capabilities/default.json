@@ -1,0 +1,12 @@
+{
+  "identifier": "default",
+  "description": "ClawPanel 默认权限",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
+  ]
+}

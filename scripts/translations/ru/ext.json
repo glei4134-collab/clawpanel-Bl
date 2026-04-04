@@ -1,0 +1,18 @@
+{
+  "title": "Расширения",
+  "desc": "Управление cftunnel и ClawApp",
+  "cftunnelTitle": "cftunnel",
+  "clawappTitle": "ClawApp",
+  "installBtn": "Быстрая установка",
+  "status": "Статус",
+  "running": "Работает",
+  "stopped": "Остановлен",
+  "version": "Версия",
+  "startTunnel": "Запустить туннель",
+  "stopTunnel": "Остановить туннель",
+  "start": "Запустить",
+  "stop": "Остановить",
+  "installing": "Установка...",
+  "installDone": "Установка завершена",
+  "installFailed": "Ошибка установки"
+}

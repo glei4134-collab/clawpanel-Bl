@@ -1,0 +1,23 @@
+{
+  "title": "Dienstverwaltung",
+  "desc": "OpenClaw-Dienste starten, stoppen und überwachen",
+  "gatewayTitle": "Gateway-Dienst",
+  "guardianTitle": "Guardian-Dienst",
+  "status": "Status",
+  "pid": "PID",
+  "uptime": "Betriebszeit",
+  "port": "Port",
+  "host": "Host",
+  "start": "Starten",
+  "stop": "Stoppen",
+  "restart": "Neustarten",
+  "forceKill": "Erzwungen beenden",
+  "viewLogs": "Protokolle ansehen",
+  "starting": "Wird gestartet...",
+  "stopping": "Wird gestoppt...",
+  "restarting": "Wird neugestartet...",
+  "loadFail": "Status laden fehlgeschlagen",
+  "healthCheck": "Zustandsprüfung",
+  "healthOk": "Läuft normal",
+  "healthFail": "Keine Antwort"
+}

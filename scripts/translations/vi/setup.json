@@ -1,0 +1,23 @@
+{
+  "title": "Thiết lập ban đầu",
+  "desc": "Cài đặt và cấu hình OpenClaw",
+  "headerTitle": "Chào mừng đến ClawPanel",
+  "recheck": "Kiểm tra lại",
+  "stepNode": "Môi trường Node.js",
+  "installed": "Đã cài đặt",
+  "downloadNode": "Tải Node.js",
+  "stepGit": "Git",
+  "stepConfig": "Tệp cấu hình",
+  "saveBtn": "Lưu",
+  "resetDefaultBtn": "Khôi phục mặc định",
+  "aiAssistant": "Trợ lý AI",
+  "openAiAssistant": "Mở trợ lý AI",
+  "nextStepsTitle": "Bước tiếp theo",
+  "configModels": "Cấu hình mô hình",
+  "gatewaySetup": "Cấu hình Gateway",
+  "messageChannels": "Kênh",
+  "enterPanel": "Vào panel",
+  "installBtn": "Cài đặt nhanh",
+  "installOpenclaw": "Cài đặt OpenClaw",
+  "installComplete": "Cài đặt hoàn tất"
+}

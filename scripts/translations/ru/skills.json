@@ -1,0 +1,19 @@
+{
+  "title": "Skills",
+  "desc": "Управление и установка навыков OpenClaw",
+  "installed": "Установленные",
+  "available": "Доступные",
+  "noSkills": "Нет навыков",
+  "install": "Установить",
+  "uninstall": "Удалить",
+  "update": "Обновить",
+  "search": "Поиск Skills...",
+  "installing": "Установка...",
+  "installSuccess": "Установлено",
+  "installFailed": "Ошибка установки",
+  "loadFailed": "Ошибка загрузки",
+  "noResults": "Ничего не найдено",
+  "refreshList": "Обновить список",
+  "checkUpdates": "Проверить обновления",
+  "noUpdates": "Всё обновлено"
+}

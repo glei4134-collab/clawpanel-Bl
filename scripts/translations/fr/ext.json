@@ -1,0 +1,18 @@
+{
+  "title": "Outils additionnels",
+  "desc": "Gérer cftunnel et ClawApp",
+  "cftunnelTitle": "cftunnel",
+  "clawappTitle": "ClawApp",
+  "installBtn": "Installation rapide",
+  "status": "Statut",
+  "running": "En cours",
+  "stopped": "Arrêté",
+  "version": "Version",
+  "startTunnel": "Démarrer le tunnel",
+  "stopTunnel": "Arrêter le tunnel",
+  "start": "Démarrer",
+  "stop": "Arrêter",
+  "installing": "Installation...",
+  "installDone": "Installation terminée",
+  "installFailed": "Échec de l'installation"
+}
