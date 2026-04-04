@@ -29,11 +29,11 @@ export async function render() {
     </div>
     
     <div class="ui-settings-grid">
-      <!-- 背景设置 -->
+      <!-- 背景与透明度 -->
       <div class="ui-settings-card">
         <div class="ui-settings-card-header">
-          <span class="ui-settings-card-icon">🖼️</span>
-          <h3>背景设置</h3>
+          <span class="ui-settings-card-icon">🎨</span>
+          <h3>背景与透明度</h3>
         </div>
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
@@ -56,25 +56,13 @@ export async function render() {
                    id="ui-bg-brightness">
             <span class="ui-settings-value">${Math.round((config.bgBrightness || 1) * 100)}%</span>
           </div>
-        </div>
-      </div>
-
-      <!-- 全局透明度 -->
-      <div class="ui-settings-card">
-        <div class="ui-settings-card-header">
-          <span class="ui-settings-card-icon">💧</span>
-          <h3>全局透明度</h3>
-        </div>
-        <div class="ui-settings-card-body">
-          <div class="ui-settings-row full">
-            <div class="ui-settings-slider-wrap">
-              <input type="range" min="0" max="100" value="${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}" 
-                     oninput="applyGlobalAlpha(this.value); this.parentElement.nextElementSibling.textContent = this.value + '%'"
-                     id="ui-global-alpha">
-            </div>
+          <div class="ui-settings-row">
+            <label>全局透明</label>
+            <input type="range" min="0" max="100" value="${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}" 
+                   oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   id="ui-global-alpha">
             <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}%</span>
           </div>
-          <p class="ui-settings-hint">影响所有区域的基础透明度</p>
         </div>
       </div>
 
