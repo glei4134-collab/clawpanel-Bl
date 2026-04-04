@@ -1639,8 +1639,6 @@
   font-weight: 700;
   color: #ffffff;
 }
-  color: var(--text-primary);
-}
 
 .ui-settings-card-icon {
   font-size: var(--text-lg);
@@ -1715,9 +1713,18 @@
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.3);
   font-size: var(--text-sm);
   cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-position-x: calc(100% - 8px);
+  padding-right: 28px;
 }
 
 .ui-settings-select:focus {
@@ -1725,9 +1732,11 @@
   border-color: var(--border-focus);
 }
 
-.ui-settings-select {
+.ui-settings-select option,
+.ui-settings-select optgroup {
+  background: #1a1a2e;
   color: #ffffff;
-  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
 }
 
 .ui-settings-hint {
