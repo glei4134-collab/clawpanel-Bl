@@ -1,6 +1,6 @@
 {
   "name": "clawpanel-bl",
-  "version": "0.5.9-bl.1",
+  "version": "0.6.0",
   "private": true,
   "description": "ClawPanel-Bl - 基于 ClawPanel 的魔改版本，专注 UI 自定义功能",
   "type": "module",
