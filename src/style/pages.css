@@ -1612,7 +1612,7 @@
 }
 
 .ui-settings-card {
-  background: var(--bg-card);
+  background: rgba(128, 128, 128, 0.85);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -1629,14 +1629,16 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
-  background: var(--bg-secondary);
+  background: rgba(100, 100, 100, 0.9);
   border-bottom: 1px solid var(--border-primary);
 }
 
 .ui-settings-card-header h3 {
   margin: 0;
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: 700;
+  color: #ffffff;
+}
   color: var(--text-primary);
 }
 
@@ -1646,6 +1648,7 @@
 
 .ui-settings-card-body {
   padding: var(--space-lg);
+  color: #ffffff;
 }
 
 .ui-settings-row {
@@ -1663,7 +1666,8 @@
   flex-shrink: 0;
   width: 70px;
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: #ffffff;
+  font-weight: 500;
 }
 
 .ui-settings-row input[type="range"] {
@@ -1676,8 +1680,8 @@
   width: 50px;
   text-align: right;
   font-size: var(--text-sm);
-  color: var(--text-primary);
-  font-weight: 500;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .ui-settings-row.full {
@@ -1721,17 +1725,28 @@
   border-color: var(--border-focus);
 }
 
+.ui-settings-select {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .ui-settings-hint {
   margin-top: var(--space-sm);
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .ui-settings-footer {
   display: flex;
   justify-content: center;
   padding-top: var(--space-lg);
-  border-top: 1px solid var(--border-primary);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ui-settings-footer .btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .ui-settings-custom-list {
@@ -1743,7 +1758,8 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-xs) var(--space-sm);
-  background: var(--bg-secondary);
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
   border-radius: var(--radius-md);
   margin-bottom: var(--space-xs);
   font-size: var(--text-sm);
