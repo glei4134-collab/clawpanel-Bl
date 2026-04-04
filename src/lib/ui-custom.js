@@ -265,6 +265,87 @@ const SOUND_PRESETS = {
       return buffer
     }
   },
+  keyboard: {
+    name: '键盘',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.exp(-t * 80)
+        data[i] = (Math.random() * 2 - 1) * envelope * 0.2 + Math.sin(2 * Math.PI * 300 * t) * envelope * 0.3
+      }
+      return buffer
+    }
+  },
+  notify: {
+    name: '通知',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.exp(-t * 20)
+        const freq = 880
+        data[i] = (Math.sin(2 * Math.PI * freq * t) + Math.sin(2 * Math.PI * freq * 1.5 * t) * 0.5) * envelope * 0.3
+      }
+      return buffer
+    }
+  },
+  success: {
+    name: '成功',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.exp(-t * 12)
+        const freq1 = 523.25, freq2 = 659.25, freq3 = 783.99
+        data[i] = (Math.sin(2 * Math.PI * freq1 * t) * 0.3 + Math.sin(2 * Math.PI * freq2 * t) * 0.3 + Math.sin(2 * Math.PI * freq3 * t) * 0.3) * envelope * 0.3
+      }
+      return buffer
+    }
+  },
+  error: {
+    name: '错误',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.exp(-t * 25)
+        data[i] = (Math.sin(2 * Math.PI * 200 * t) + Math.sin(2 * Math.PI * 180 * t)) * envelope * 0.3
+      }
+      return buffer
+    }
+  },
+  swoosh: {
+    name: '滑过',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.sin(Math.PI * t / 0.1) * Math.exp(-t * 10)
+        const freq = 400 + t * 2000
+        data[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.2
+      }
+      return buffer
+    }
+  },
+  soft: {
+    name: '柔和',
+    create: (ctx) => {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate
+        const envelope = Math.exp(-t * 25)
+        data[i] = Math.sin(2 * Math.PI * 600 * t) * envelope * 0.25
+      }
+      return buffer
+    }
+  },
   none: {
     name: '无',
     create: () => null
@@ -344,13 +425,6 @@ export function getBubbleStyleById(name) {
   }
   const custom = getCustomBubbleStyles()
   return custom[name] || BUBBLE_STYLES.modern
-}
-
-export function getSoundPresets() {
-  return Object.keys(SOUND_PRESETS).map(key => ({
-    id: key,
-    name: SOUND_PRESETS[key].name
-  }))
 }
 
 function createClickSoundBuffer(ctx, preset = 'click') {
