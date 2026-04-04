@@ -118,15 +118,15 @@ input:hover, textarea:hover, select:hover {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  background: rgba(128, 128, 128, 0.5);
 }
 .sidebar-collapsed {
-  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  background: rgba(128, 128, 128, 0.5);
 }
 
 /* 卡片透明效果 */
 .card, .stat-card, .service-card {
-  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid rgba(255, 255, 255, 0.15);

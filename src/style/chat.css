@@ -2309,7 +2309,7 @@ button:active:not(:disabled) {
 
 /* Force transparent chat area */
 #content, .page, .chat-page, .chat-header, .chat-workspace-panel, .chat-workspace-body, .chat-workspace-editor-pane, .chat-workspace-sidebar-pane, .chat-disconnect-bar, .chat-connect-overlay, .chat-connect-card, .hosted-agent-panel, .hosted-agent-body, .chat-cmd-panel, .chat-attachments-preview {
-  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  background: transparent;
 }
 
 /* Force sidebar elements transparent (but not .chat-sidebar which uses CSS var) */
@@ -2323,7 +2323,7 @@ button:active:not(:disabled) {
 }
 
 #sidebar {
-  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  background: rgba(255, 255, 255, var(--alpha-nav-sidebar, 0.25));
 }
 
 
