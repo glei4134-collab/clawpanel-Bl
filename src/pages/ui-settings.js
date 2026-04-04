@@ -5,6 +5,7 @@
 import { t } from '../lib/i18n.js'
 import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, applyCardAlpha, importCustomSound } from '../lib/ui-custom.js'
 import { toast } from '../components/toast.js'
+import { createCustomSelect } from '../components/custom-select.js'
 
 export async function render() {
   const page = document.createElement('div')
@@ -51,7 +52,7 @@ export async function render() {
           </div>
           <div class="ui-settings-row">
             <label>亮度</label>
-            <input type="range" min="10" max="100" value="${Math.round((config.bgBrightness || 1) * 100)}" 
+            <input type="range" min="0" max="100" value="${Math.round((config.bgBrightness || 1) * 100)}" 
                    oninput="applyBgBrightness(this.value); this.nextElementSibling.textContent = this.value + '%'"
                    id="ui-bg-brightness">
             <span class="ui-settings-value">${Math.round((config.bgBrightness || 1) * 100)}%</span>
@@ -62,13 +63,6 @@ export async function render() {
                    oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
                    id="ui-global-alpha">
             <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100 / 0.5)}%</span>
-          </div>
-          <div class="ui-settings-row">
-            <label>面板透明</label>
-            <input type="range" min="30" max="100" value="${Math.round((config.cardAlpha ?? 0.85) * 100)}" 
-                   oninput="applyCardAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
-                   id="ui-card-alpha">
-            <span class="ui-settings-value">${Math.round((config.cardAlpha ?? 0.85) * 100)}%</span>
           </div>
         </div>
       </div>
