@@ -64,7 +64,7 @@ export default {
   registryHuawei: _('华为云镜像', 'Huawei Cloud Mirror', '華為雲鏡像'),
   installBtn: _('一键安装', 'Install', '一鍵安裝', 'ワンクリックインストール', '원클릭 설치', 'Cài đặt nhanh', 'Instalación rápida', 'Instalação rápida', 'Быстрая установка', 'Installation rapide', 'Schnellinstallation'),
   methodHintAuto: _('自动选择最优安装方式：优先使用独立安装包（零依赖、最快），失败时自动降级到 npm 编译安装。', 'Auto-selects best method: prefers standalone package (zero deps, fastest), falls back to npm on failure.', '自動選擇最優安裝方式：優先使用獨立安裝包（零依赖、最快），失敗時自動降級到 npm 編译安裝。'),
-  methodHintR2: _('从晴辰云 CDN 下载独立安装包，自带 Node.js 运行时，无需 npm。国内下载速度最快。', 'Downloads standalone package from CDN with bundled Node.js runtime, no npm needed. Fastest for China.', '從晴辰雲 CDN 下載獨立安裝包，自帶 Node.js 執行時，無需 npm。國內下載速度最快。'),
+  methodHintR2: _('从 CDN 下载独立安装包，自带 Node.js 运行时，无需 npm。国内下载速度最快。', 'Downloads standalone package from CDN with bundled Node.js runtime, no npm needed. Fastest in China.', '從 CDN 下載獨立安裝包，自帶 Node.js 執行時，無需 npm。國內下載速度最快。'),
   methodHintGithub: _('从 GitHub Releases 下载独立安装包。CDN 不可用时的备选方案。', 'Downloads standalone package from GitHub Releases. Fallback when CDN is unavailable.', '從 GitHub Releases 下載獨立安裝包。CDN 不可用時的備選方案。'),
   methodHintNpm: _('传统的 npm install 方式，需要本机已安装 Node.js 和 npm，且网络能访问 npm 仓库。', 'Traditional npm install, requires local Node.js, npm, and network access to npm registry.', '傳統的 npm install 方式，需要本機已安裝 Node.js 和 npm，且網路能訪問 npm 倉庫。'),
   envHintTitle: _('找不到已安装的 OpenClaw？', 'Can\'t find installed OpenClaw?', '找不到已安裝的 OpenClaw？'),

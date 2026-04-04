@@ -97,17 +97,11 @@ async function loadVersion(page) {
     lastVersionInfo = info
     detectedSource = info.source || 'chinese'
     const ver = info.current || t('common.unknown')
-    const hasRecommended = !!info.recommended
-    const aheadOfRecommended = !!info.current && hasRecommended && !!info.ahead_of_recommended
-    const driftFromRecommended = !!info.current && hasRecommended && !info.is_recommended && !aheadOfRecommended
     const isChinese = detectedSource === 'chinese'
     const sourceTag = isChinese ? t('services.chineseEdition') : t('services.officialEdition')
     const switchLabel = isChinese ? t('services.switchToOfficial') : t('services.switchToChinese')
     const switchTarget = isChinese ? 'official' : 'chinese'
     const dockerImage = (panelConfig?.dockerDefaultImage || '').trim() || 'ghcr.io/qingchencloud/openclaw'
-    const policyNote = aheadOfRecommended
-      ? t('services.policyAhead', { ver, recommended: info.recommended })
-      : t('services.policyDefault')
 
     if (isInDocker()) {
       bar.innerHTML = `
@@ -133,17 +127,10 @@ async function loadVersion(page) {
             </div>
             <div class="stat-card-value">${ver}</div>
             <div class="stat-card-meta">
-              ${hasRecommended
-                ? (aheadOfRecommended ? t('services.aheadOfRecommended', { version: info.recommended }) : driftFromRecommended ? t('services.recommendedStable', { version: info.recommended }) : t('services.alignedRecommended', { version: info.recommended }))
-                : t('services.noRecommended')}
-              ${info.latest_update_available && info.latest ? ' · ' + t('services.latestUpstream', { version: info.latest }) : ''}
+              ${info.latest_update_available && info.latest ? t('services.latestUpstream', { version: info.latest }) : ''}
             </div>
             <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-sm);flex-wrap:wrap">
-              ${aheadOfRecommended ? `<button class="btn btn-primary btn-sm" data-action="upgrade">${t('services.rollbackToRecommended')}</button>` : driftFromRecommended ? `<button class="btn btn-primary btn-sm" data-action="upgrade">${t('services.switchToRecommended')}</button>` : ''}
               <button class="btn btn-secondary btn-sm" data-action="switch-source" data-source="${switchTarget}">${switchLabel}</button>
-            </div>
-            <div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary);line-height:1.6">
-              ${policyNote}
             </div>
           </div>
         </div>

@@ -60,12 +60,6 @@ async function loadData(page) {
     const isInstalled = !!version.current
     const sourceLabel = version.source === 'official' ? t('about.official') : version.source === 'chinese' ? t('about.chinese') : t('about.unknownSource')
     const btnSm = 'padding:2px 8px;font-size:var(--font-size-xs)'
-    const hasRecommended = !!version.recommended
-    const aheadOfRecommended = isInstalled && hasRecommended && !!version.ahead_of_recommended
-    const driftFromRecommended = isInstalled && hasRecommended && !version.is_recommended && !aheadOfRecommended
-    const policyRiskHint = aheadOfRecommended
-      ? t('about.policyAhead', { current: version.current, recommended: version.recommended })
-      : t('about.policyDefault')
 
     cards.innerHTML = `
       <div class="stat-card">
@@ -77,23 +71,10 @@ async function loadData(page) {
         <div class="stat-card-header"><span class="stat-card-label">OpenClaw · ${sourceLabel}</span></div>
         <div class="stat-card-value">${version.current || t('about.notInstalled')}</div>
         <div class="stat-card-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          ${isInstalled && hasRecommended
-            ? (aheadOfRecommended
-              ? `<span style="color:var(--warning,#f59e0b)">${t('about.aheadOfRecommended', { ver: version.recommended })}</span>
-                 <button class="btn btn-primary btn-sm" id="btn-apply-recommended" style="${btnSm}">${t('about.rollbackToRecommended')}</button>`
-              : driftFromRecommended
-              ? `<span style="color:var(--accent)">${t('about.recommendedStable', { ver: version.recommended })}</span>
-                 <button class="btn btn-primary btn-sm" id="btn-apply-recommended" style="${btnSm}">${t('about.switchToRecommended')}</button>`
-              : `<span style="color:var(--success)">${t('about.isRecommended')}</span>`)
-            : ''}
-          ${version.latest_update_available && version.latest ? `<span style="color:var(--text-tertiary)">${t('about.latestUpstream', { ver: version.latest })}</span>` : ''}
           <button class="btn btn-${isInstalled ? 'secondary' : 'primary'} btn-sm" id="btn-version-mgmt" style="${btnSm}">
             ${isInstalled ? t('about.switchVersion') : t('about.installOpenclaw')}
           </button>
           ${isInstalled ? `<button class="btn btn-secondary btn-sm" id="btn-uninstall" style="${btnSm};color:var(--error)">${t('about.uninstall')}</button>` : ''}
-        </div>
-        <div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary);line-height:1.6">
-          ${policyRiskHint}
         </div>
       </div>
       <div class="stat-card">
@@ -102,11 +83,6 @@ async function loadData(page) {
         <div class="stat-card-meta">${install.installed ? t('about.configExists') : t('about.configNotFound')}</div>
       </div>
     `
-
-    const applyRecommendedBtn = cards.querySelector('#btn-apply-recommended')
-    if (applyRecommendedBtn && version.recommended) {
-      applyRecommendedBtn.onclick = () => doInstall(page, aheadOfRecommended ? t('about.rollbackToRecommendedStable') : t('about.switchToRecommendedStable'), version.source, version.recommended)
-    }
 
     // 版本管理 / 安装
     const versionMgmtBtn = cards.querySelector('#btn-version-mgmt')
@@ -436,7 +412,7 @@ async function checkHotUpdate(cards, panelVersion) {
         }
       })
     } else if (!info.compatible) {
-      meta.innerHTML = `<span style="color:var(--text-tertiary)">${t('about.needFullUpdate')}</span>`
+      meta.innerHTML = `<span style="color:var(--warning)">${t('about.upToDate')}</span>`
     } else {
       meta.innerHTML = `<span style="color:var(--success)">${t('about.upToDate')}</span>`
     }

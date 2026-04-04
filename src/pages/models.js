@@ -6,7 +6,7 @@ import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showModal, showConfirm } from '../components/modal.js'
 import { icon, statusIcon } from '../lib/icons.js'
-import { API_TYPES, PROVIDER_PRESETS, QTCOOL, MODEL_PRESETS, fetchQtcoolModels } from '../lib/model-presets.js'
+import { API_TYPES, PROVIDER_PRESETS, MODEL_PRESETS } from '../lib/model-presets.js'
 import { t } from '../lib/i18n.js'
 
 export async function render() {
@@ -24,28 +24,6 @@ export async function render() {
     </div>
     <div class="form-hint" style="margin-bottom:var(--space-md)">
       ${t('models.providerHint')}
-    </div>
-    <div id="qtcool-promo" style="margin-bottom:var(--space-md);border-radius:var(--radius-lg);border:1px solid var(--border-primary);border-left:3px solid var(--primary);background:var(--bg-secondary);padding:16px 20px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-        <div style="flex:1;min-width:200px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-weight:700;font-size:var(--font-size-base);color:var(--text-primary)">${icon('zap', 15)} ${t('models.qtcoolName')}</span>
-            <span style="font-size:10px;background:var(--primary);color:#fff;padding:1px 7px;border-radius:8px">${t('models.qtcoolRecommend')}</span>
-          </div>
-          <div style="font-size:var(--font-size-xs);color:var(--text-secondary);line-height:1.5">
-            ${t('models.qtcoolDesc')}
-            <a href="${QTCOOL.site}" target="_blank" style="color:var(--primary);text-decoration:none">${t('models.qtcoolMore')}</a>
-          </div>
-        </div>
-        <a href="${QTCOOL.checkinUrl}" target="_blank" class="btn btn-primary btn-sm">${icon('gift', 12)} ${t('models.qtcoolCheckin')}</a>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input class="form-input" id="qtcool-apikey" placeholder="${t('models.qtcoolKeyPlaceholder')}" style="font-size:12px;padding:6px 10px;flex:1;min-width:180px">
-        <button class="btn btn-primary btn-sm" id="btn-qtcool-oneclick">${icon('plus', 14)} ${t('models.qtcoolFetchModels')}</button>
-      </div>
-      <div style="font-size:11px;color:var(--text-tertiary);margin-top:6px">
-        ${t('models.qtcoolNoKey')} <a href="${QTCOOL.checkinUrl}" target="_blank" style="color:var(--primary)">${t('models.qtcoolCheckinPage')}</a> ${t('models.qtcoolCheckinHint')} <a href="${QTCOOL.usageUrl}" target="_blank" style="color:var(--primary)">${t('models.qtcoolDashboard')}</a> ${t('models.qtcoolCopyKey')}
-      </div>
     </div>
     <div id="default-model-bar"></div>
     <div style="margin-bottom:var(--space-md)">
@@ -750,120 +728,6 @@ function applyDefaultModel(state) {
 function bindTopActions(page, state) {
   page.querySelector('#btn-add-provider').onclick = () => addProvider(page, state)
   page.querySelector('#btn-undo').onclick = () => undo(page, state)
-
-  // 晴辰云：获取模型列表 → 弹窗让用户选择要添加的模型
-  page.querySelector('#btn-qtcool-oneclick').onclick = async () => {
-    if (!state.config) { toast(t('models.configNotReady'), 'warning'); return }
-
-    const bannerKeyInput = page.querySelector('#qtcool-apikey')
-    const bannerKey = bannerKeyInput ? bannerKeyInput.value.trim() : ''
-
-    const btn = page.querySelector('#btn-qtcool-oneclick')
-    btn.textContent = t('models.qtcoolFetching')
-    btn.disabled = true
-
-    const models = await fetchQtcoolModels(bannerKey || undefined)
-
-    btn.innerHTML = `${icon('plus', 14)} ${t('models.qtcoolFetchModels')}`
-    btn.disabled = false
-
-    if (!models.length) {
-      toast(t('models.fetchRemoteFailed'), 'error')
-      return
-    }
-
-    // 已有的模型 ID
-    const existingProvider = (state.config.models?.providers || {})[QTCOOL.providerKey]
-    const existingIds = new Set((existingProvider?.models || []).map(m => typeof m === 'string' ? m : m.id))
-
-    // 弹窗让用户勾选要添加的模型
-    const overlay = document.createElement('div')
-    overlay.className = 'modal-overlay'
-    overlay.innerHTML = `
-      <div class="modal" style="max-height:80vh;overflow-y:auto">
-        <div class="modal-title">${t('models.qtcoolSelectTitle')}</div>
-        <div class="form-hint" style="margin-bottom:12px">${t('models.qtcoolSelectHint', { count: models.length })}</div>
-        ${!existingProvider ? `<div style="margin-bottom:12px">
-          <label class="form-label" style="font-size:var(--font-size-xs)">${t('models.qtcoolKeyLabel')} <a href="${QTCOOL.checkinUrl}" target="_blank" style="color:var(--primary);font-weight:400">${t('models.qtcoolKeyCheckinLink')}</a></label>
-          <input class="form-input" id="qtsel-apikey" placeholder="${t('models.qtcoolKeyPlaceholder2')}" style="font-size:12px">
-        </div>` : ''}
-        <div style="margin-bottom:12px;display:flex;gap:8px">
-          <button class="btn btn-sm btn-secondary" id="qtsel-all">${t('models.selectAll')}</button>
-          <button class="btn btn-sm btn-secondary" id="qtsel-none">${t('models.selectNone')}</button>
-        </div>
-        <div id="qtmodel-list" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;padding-right:4px">
-          ${models.map(m => {
-            const already = existingIds.has(m.id)
-            return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius-md);cursor:pointer;background:var(--bg-tertiary);opacity:${already ? '0.5' : '1'}">
-              <input type="checkbox" value="${m.id}" ${already ? `disabled title="${t('models.alreadyAdded')}"` : 'checked'} style="accent-color:var(--primary)">
-              <span style="font-size:var(--font-size-sm);flex:1">${m.id}</span>
-              ${already ? `<span style="font-size:10px;color:var(--text-tertiary)">${t('models.already')}</span>` : ''}
-            </label>`
-          }).join('')}
-        </div>
-        <div class="modal-actions" style="margin-top:16px">
-          <button class="btn btn-primary" id="qtsel-confirm">${icon('plus', 14)} ${t('models.qtcoolAddSelected')}</button>
-          <button class="btn btn-secondary" id="qtsel-cancel">${t('common.cancel')}</button>
-        </div>
-      </div>
-    `
-    document.body.appendChild(overlay)
-    // 从横幅预填充 key
-    const dialogKeyInput = overlay.querySelector('#qtsel-apikey')
-    if (dialogKeyInput && bannerKey) dialogKeyInput.value = bannerKey
-    overlay.querySelector('#qtsel-cancel').onclick = () => overlay.remove()
-    overlay.querySelector('#qtsel-all').onclick = () => {
-      overlay.querySelectorAll('#qtmodel-list input:not(:disabled)').forEach(cb => cb.checked = true)
-    }
-    overlay.querySelector('#qtsel-none').onclick = () => {
-      overlay.querySelectorAll('#qtmodel-list input:not(:disabled)').forEach(cb => cb.checked = false)
-    }
-    overlay.querySelector('#qtsel-confirm').onclick = () => {
-      const selected = [...overlay.querySelectorAll('#qtmodel-list input:checked:not(:disabled)')].map(cb => cb.value)
-      if (!selected.length) { toast(t('models.qtcoolNoneSelected'), 'info'); return }
-
-      // 新建服务商时需要 API Key
-      const keyInput = overlay.querySelector('#qtsel-apikey')
-      const apiKey = keyInput ? keyInput.value.trim() : ''
-      if (!existingProvider && !apiKey) {
-        toast(t('models.qtcoolNoKeyWarn'), 'warning')
-        keyInput?.focus()
-        return
-      }
-      overlay.remove()
-
-      pushUndo(state)
-      if (!state.config.models) state.config.models = {}
-      if (!state.config.models.providers) state.config.models.providers = {}
-
-      const selectedModels = models.filter(m => selected.includes(m.id))
-      if (existingProvider) {
-        let added = 0
-        for (const m of selectedModels) {
-          if (!existingIds.has(m.id)) { existingProvider.models.push({ ...m }); added++ }
-        }
-        toast(added ? t('models.qtcoolAdded', { count: added }) : t('models.qtcoolAllExist'), added ? 'success' : 'info')
-      } else {
-        state.config.models.providers[QTCOOL.providerKey] = {
-          baseUrl: QTCOOL.baseUrl,
-          apiKey: apiKey,
-          api: QTCOOL.api,
-          models: selectedModels.map(m => ({ ...m })),
-        }
-        if (!getCurrentPrimary(state.config) && selectedModels.length) {
-          if (!state.config.agents) state.config.agents = {}
-          if (!state.config.agents.defaults) state.config.agents.defaults = {}
-          if (!state.config.agents.defaults.model) state.config.agents.defaults.model = {}
-          state.config.agents.defaults.model.primary = QTCOOL.providerKey + '/' + selectedModels[0].id
-        }
-        toast(t('models.qtcoolProviderAdded', { count: selectedModels.length }), 'success')
-      }
-      renderProviders(page, state)
-      renderDefaultBar(page, state)
-      updateUndoBtn(page, state)
-      autoSave(state)
-    }
-  }
 }
 
 // 添加服务商（带预设快捷选择）
@@ -1284,7 +1148,7 @@ async function handleBatchTest(section, state, providerKey) {
 async function fetchRemoteModels(btn, page, state, providerKey) {
   const provider = state.config.models.providers[providerKey]
   btn.disabled = true
-  btn.textContent = t('models.qtcoolFetching')
+  btn.textContent = '获取中...' // TODO: add translation key
 
   try {
     const remoteIds = await api.listRemoteModels(provider.baseUrl, provider.apiKey || '', provider.api || 'openai-completions')
@@ -1364,7 +1228,7 @@ async function fetchRemoteModels(btn, page, state, providerKey) {
       renderDefaultBar(page, state)
       updateUndoBtn(page, state)
       autoSave(state)
-      toast(t('models.qtcoolAdded', { count: selected.length }), 'success')
+      toast(`已添加 ${selected.length} 个模型`, 'success')
     }
 
     filterInput.focus()
