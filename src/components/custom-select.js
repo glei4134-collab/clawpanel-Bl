@@ -30,7 +30,9 @@ export function createCustomSelect(options, {
   
   function updateDisplay() {
     const selected = options.find(o => o.value === currentValue)
-    trigger.querySelector('.custom-select-value').textContent = selected ? selected.label : placeholder
+    const valueSpan = trigger.querySelector('.custom-select-value')
+    valueSpan.textContent = selected ? selected.label : placeholder
+    valueSpan.dataset.value = currentValue
     selectedIndex = options.findIndex(o => o.value === currentValue)
   }
   

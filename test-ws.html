@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Full Test v2</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    #status { white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>WebSocket Full Connection Test v2</h1>
+  <button onclick="testConnection()">Test Connection</button>
+  <button onclick="testWithoutToken()">Test Without Token</button>
+  <button onclick="closeWs()">Close</button>
+  <hr>
+  <div id="status">Ready. Click a button to test.</div>
+
+  <script type="module">
+    import { api } from '/src/lib/tauri-api.js';
+    import { isTauriRuntime } from '/src/lib/tauri-api.js';
+
+    let ws = null;
+    const statusDiv = document.getElementById('status');
+
+    function log(msg, color = 'black') {
+      statusDiv.innerHTML += `<br><span style="color:${color}">${msg}</span>`;
+      console.log(msg);
+    }
+
+    window.closeWs = function() {
+      if (ws) {
+        ws.close();
+        ws = null;
+        log('Connection closed manually');
+      }
+    };
+
+    window.testWithoutToken = async function() {
+      log('=== Test WITHOUT Token ===');
+      const host = isTauriRuntime() ? '127.0.0.1:18789' : location.host;
+      const url = `ws://${host}/ws`;
+      
+      log(`Connecting to: ${url}`);
+      log(`Tauri Runtime: ${isTauriRuntime()}`);
+      
+      ws = new WebSocket(url);
+      
+      ws.onopen = () => {
+        log('✓ Connection opened!', 'green');
+        log(`State: ${ws.readyState}`);
+      };
+      
+      ws.onmessage = (event) => {
+        log(`📨 Message: ${event.data.substring(0, 300)}`, 'blue');
+      };
+      
+      ws.onerror = (err) => {
+        log(`✗ Error: ${JSON.stringify(err)}`, 'red');
+      };
+      
+      ws.onclose = (e) => {
+        log(`Connection closed: code=${e.code}, reason="${e.reason || 'none'}"`, 'orange');
+        ws = null;
+      };
+      
+      // Auto close after 5 seconds if still open
+      setTimeout(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          log('Still connected after 5s - GOOD!', 'green');
+        }
+      }, 5000);
+    };
+
+    window.testConnection = async function() {
+      log('=== Test WITH Token ===');
+      
+      if (ws) {
+        ws.close();
+        ws = null;
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      try {
+        const config = await api.readOpenclawConfig();
+        const gw = config?.gateway || {};
+        const token = gw.auth?.token || gw.authToken || '';
+        const host = isTauriRuntime() ? `127.0.0.1:${gw.port || 18789}` : location.host;
+        const url = `ws://${host}/ws?token=${encodeURIComponent(token)}`;
+
+        log(`Connecting to: ${url}`);
+        log(`Token: ${token ? token.substring(0, 20) + '...' : 'empty'}`);
+        log(`Tauri Runtime: ${isTauriRuntime()}`);
+        log(`Location Host: ${location.host}`);
+
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+          log('✓ Connection opened!', 'green');
+          log(`State: ${ws.readyState}`);
+        };
+
+        ws.onmessage = (event) => {
+          log(`📨 Message: ${event.data.substring(0, 500)}`, 'blue');
+          try {
+            const msg = JSON.parse(event.data);
+            log(`Parsed: type=${msg.type}, event=${msg.event || 'N/A'}`, 'purple');
+          } catch (e) {
+            log(`Parse error: ${e.message}`, 'red');
+          }
+        };
+
+        ws.onerror = (err) => {
+          log(`✗ Error: ${JSON.stringify(err)}`, 'red');
+        };
+
+        ws.onclose = (e) => {
+          log(`Connection closed: code=${e.code}, reason="${e.reason || 'none'}"`, 'orange');
+          ws = null;
+        };
+
+        setTimeout(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            log('Still connected after 5s - handshake seems OK!', 'green');
+          }
+        }, 5000);
+
+      } catch (err) {
+        log(`Exception: ${err.message}`, 'red');
+      }
+    };
+  </script>
+</body>
+</html>

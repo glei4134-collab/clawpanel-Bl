@@ -60,3 +60,5 @@ src-tauri/.cargo/
 CONTEXT_STATE.md
 PROJECT_CONTRACT.md
 project.yaml
+mcp.json
+mcp.json.backup

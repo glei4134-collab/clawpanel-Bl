@@ -16,7 +16,15 @@ import { statusIcon } from './lib/icons.js'
 import { isForeignGatewayError, showGatewayConflictGuidance } from './lib/gateway-ownership.js'
 import { initI18n, t } from './lib/i18n.js'
 import { toast } from './components/toast.js'
-import { applyUIConfig, setupClickSounds } from './lib/ui-custom.js'
+import * as uiCustom from './lib/ui-custom.js'
+
+// 暴露 UI 设置函数到全局（供 inline onclick/oninput 使用）
+Object.keys(uiCustom).forEach(key => {
+  if (key.startsWith('apply') || key.startsWith('get') || key.startsWith('save')) {
+    window[key] = uiCustom[key]
+  }
+})
+const { applyUIConfig, setupClickSounds } = uiCustom
 
 // 样式
 import './style/variables.css'

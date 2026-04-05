@@ -5,6 +5,7 @@
  */
 import { toast } from '../components/toast.js'
 import { showContentModal, showConfirm } from '../components/modal.js'
+import { showModalSelect } from '../components/modal-select.js'
 import { icon } from '../lib/icons.js'
 import { onGatewayChange } from '../lib/app-state.js'
 import { wsClient } from '../lib/ws-client.js'
@@ -316,12 +317,18 @@ async function openTaskDialog(job, page, state) {
       </div>
       <div class="form-group">
         <label class="form-label">${t('cron.taskAgent')}</label>
-        <select class="form-input" name="agentId">${agentOptionsHtml}</select>
+        <button type="button" class="btn btn-secondary" id="${formId}-agent-btn" style="width:100%">
+          <span id="${formId}-agent-text">${job?.agentId || t('cron.taskAgentDefault')}</span>
+          <span style="opacity:0.5">▼</span>
+        </button>
         <div class="form-hint">${t('cron.taskAgentHint')}</div>
       </div>
       <div class="form-group">
         <label class="form-label">${t('cron.taskDelivery')}</label>
-        <select class="form-input" name="deliveryChannel"><option value="">${t('cron.taskDeliveryNone')}</option></select>
+        <button type="button" class="btn btn-secondary" id="${formId}-channel-btn" style="width:100%">
+          <span id="${formId}-channel-text">${job?.delivery?.channel || t('cron.taskDeliveryNone')}</span>
+          <span style="opacity:0.5">▼</span>
+        </button>
         <div class="form-hint">${t('cron.taskDeliveryHint')}</div>
       </div>
       <div class="form-group">
@@ -354,25 +361,56 @@ async function openTaskDialog(job, page, state) {
     const channels = cfg?.channels || {}
     const channelIds = Object.keys(channels).filter(k => k !== 'defaults')
     if (channelIds.length === 0) return // 无渠道不需要选
-    const select = modal.querySelector('select[name="deliveryChannel"]')
-    if (!select) return
-    const current = job?.delivery?.channel || ''
-    select.innerHTML = `<option value="">${t('cron.taskDeliveryNone')}</option>` + channelIds.map(ch =>
-      `<option value="${escapeAttr(ch)}" ${ch === current ? 'selected' : ''}>${escapeHtml(ch)}</option>`
-    ).join('')
   }).catch(() => {})
 
-  // 异步加载 Agent 列表并更新下拉框（不阻塞弹窗显示）
-  api.listAgents().then(res => {
-    const agents = Array.isArray(res) ? res : (res?.agents || [])
-    if (!agents.length) return
-    const select = modal.querySelector('select[name="agentId"]')
-    if (!select) return
-    const currentVal = select.value
-    select.innerHTML = `<option value="">${t('cron.taskAgentDefault')}</option>` + agents.map(a =>
-      `<option value="${escapeAttr(a.id)}" ${a.id === (job?.agentId || currentVal) ? 'selected' : ''}>${escapeHtml(a.name || a.id)}</option>`
-    ).join('')
-  }).catch(() => {})
+  // Agent 选择按钮
+  modal.querySelector('#' + formId + '-agent-btn').onclick = async () => {
+    try {
+      const res = await api.listAgents()
+      const agents = Array.isArray(res) ? res : (res?.agents || [])
+      if (!agents.length) {
+        toast(t('cron.loadFailed'), 'warning')
+        return
+      }
+      const options = agents.map(a => ({ value: a.id, label: a.name || a.id }))
+      showModalSelect({
+        title: t('cron.taskAgent'),
+        options,
+        value: job?.agentId || '',
+        onchange: (selected) => {
+          modal.querySelector('#' + formId + '-agent-text').textContent = selected || t('cron.taskAgentDefault')
+          modal.dataset.agentId = selected
+        }
+      })
+    } catch {
+      toast(t('cron.loadFailed'), 'error')
+    }
+  }
+
+  // 渠道选择按钮
+  modal.querySelector('#' + formId + '-channel-btn').onclick = async () => {
+    try {
+      const cfg = await api.readOpenclawConfig()
+      const channels = cfg?.channels || {}
+      const channelIds = Object.keys(channels).filter(k => k !== 'defaults')
+      if (channelIds.length === 0) {
+        toast(t('cron.noChannels'), 'warning')
+        return
+      }
+      const options = channelIds.map(ch => ({ value: ch, label: ch }))
+      showModalSelect({
+        title: t('cron.taskDelivery'),
+        options,
+        value: job?.delivery?.channel || '',
+        onchange: (selected) => {
+          modal.querySelector('#' + formId + '-channel-text').textContent = selected || t('cron.taskDeliveryNone')
+          modal.dataset.channel = selected
+        }
+      })
+    } catch {
+      toast(t('cron.loadFailed'), 'error')
+    }
+  }
 
   // 快捷预设按钮
   modal.querySelectorAll('.cron-shortcut').forEach(btn => {
@@ -409,7 +447,7 @@ async function openTaskDialog(job, page, state) {
     const name = modal.querySelector('input[name="name"]').value.trim()
     const message = modal.querySelector('textarea[name="message"]').value.trim()
     const schedule = modal.querySelector('input[name="schedule"]').value.trim()
-    const agentId = modal.querySelector('select[name="agentId"]').value || undefined
+    const agentId = modal.dataset.agentId || undefined
     const enabled = modal.querySelector('input[name="enabled"]').checked
 
     if (!name) { toast(t('cron.nameRequired'), 'warning'); return }
@@ -420,13 +458,14 @@ async function openTaskDialog(job, page, state) {
     saveBtn.disabled = true
     saveBtn.textContent = t('cron.saving')
 
+    const deliveryChannel = modal.dataset.channel || undefined
+
     try {
       if (isEdit) {
         const patch = { name, enabled }
         patch.schedule = { kind: 'cron', expr: schedule }
         patch.payload = { kind: 'agentTurn', message }
         if (agentId) patch.agentId = agentId
-        const deliveryChannel = modal.querySelector('select[name="deliveryChannel"]')?.value
         if (deliveryChannel) {
           patch.delivery = { mode: 'announce', channel: deliveryChannel }
         }
@@ -440,7 +479,6 @@ async function openTaskDialog(job, page, state) {
           payload: { kind: 'agentTurn', message },
         }
         if (agentId) params.agentId = agentId
-        const deliveryChannel = modal.querySelector('select[name="deliveryChannel"]')?.value
         if (deliveryChannel) {
           params.delivery = { mode: 'announce', channel: deliveryChannel }
         }

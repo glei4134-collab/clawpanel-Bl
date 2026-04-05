@@ -3,7 +3,7 @@
  */
 
 import { t } from '../lib/i18n.js'
-import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, applyBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, applyCardAlpha, importCustomSound } from '../lib/ui-custom.js'
+import { getUIConfig, saveUIConfig, applyUIConfig, getBubbleStyle, getAvailableBubbleStyles, getAllBubbleStyles, getBubbleStyleById, saveCustomBubbleStyle, deleteCustomBubbleStyle, getCustomBubbleStyles, applyBgBlur, saveBgBlur, applyBgBrightness, saveBgBrightness, applyBgImage, saveBgImage, applyBubbleStyle, applySoundPreset, applySoundVolume, saveSoundVolume, applyGlobalAlpha, saveGlobalAlpha, applyNavSidebarFine, saveNavSidebarFine, applyMainFine, saveMainFine, applyMessagesFine, saveMessagesFine, applySessionFine, saveSessionFine, applyInputFine, saveInputFine, applyNavSidebarBlurFine, saveNavSidebarBlurFine, applySidebarBlurFine, saveSidebarBlurFine, applyMainBlurFine, saveMainBlurFine, applyMessagesBlurFine, saveMessagesBlurFine, applySessionBlurFine, saveSessionBlurFine, applyInputBlurFine, saveInputBlurFine, applyCardAlpha, saveCardAlpha, importCustomSound } from '../lib/ui-custom.js'
 import { toast } from '../components/toast.js'
 import { createCustomSelect } from '../components/custom-select.js'
 
@@ -25,16 +25,20 @@ export async function render() {
 
   page.innerHTML = `
     <div class="page-header">
-      <h1 class="page-title">UI 设置</h1>
+      <h1 class="page-title">🎨 UI 设置</h1>
       <p class="page-desc">自定义界面外观、背景和透明度效果</p>
     </div>
     
-    <div class="ui-settings-grid">
+    <div class="ui-settings-grid ui-settings-grid-3">
       <!-- 背景与透明度 -->
       <div class="ui-settings-card">
         <div class="ui-settings-card-header">
           <span class="ui-settings-card-icon">🎨</span>
           <h3>背景与透明度</h3>
+        </div>
+        <div class="ui-settings-tips">
+          <p>💡 <b>透明度说明：</b>100% = 底层图片完全显示，0% = 纯白色背景</p>
+          <p>💡 <b>模糊度说明：</b>0px = 完全清晰，数值越大越模糊（范围 0-50px）</p>
         </div>
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
@@ -45,29 +49,33 @@ export async function render() {
           </div>
           <div class="ui-settings-row">
             <label>模糊度</label>
-            <input type="range" min="0" max="10" step="0.1" value="${config.bgBlur || 0}" 
-                   oninput="applyBgBlur(this.value); this.nextElementSibling.textContent = parseFloat(this.value).toFixed(1) + 'px'"
+            <input type="range" min="0" max="50" step="2" value="${config.bgBlur || 0}" 
+                   oninput="applyBgBlur(this.value); this.nextElementSibling.textContent = parseFloat(this.value).toFixed(0) + 'px'" 
+                   onchange="saveBgBlur(this.value)"
                    id="ui-bg-blur">
             <span class="ui-settings-value">${(config.bgBlur || 0).toFixed(1)}px</span>
           </div>
           <div class="ui-settings-row">
             <label>亮度</label>
             <input type="range" min="0" max="100" value="${Math.round((config.bgBrightness || 1) * 100)}" 
-                   oninput="applyBgBrightness(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   oninput="applyBgBrightness(this.value); this.nextElementSibling.textContent = this.value + '%'" 
+                   onchange="saveBgBrightness(this.value)"
                    id="ui-bg-brightness">
             <span class="ui-settings-value">${Math.round((config.bgBrightness || 1) * 100)}%</span>
           </div>
           <div class="ui-settings-row">
             <label>全局透明</label>
             <input type="range" min="0" max="100" value="${Math.round((config.globalAlpha ?? 0) * 100)}" 
-                   oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   oninput="applyGlobalAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'" 
+                   onchange="saveGlobalAlpha(this.value)"
                    id="ui-global-alpha">
             <span class="ui-settings-value">${Math.round((config.globalAlpha ?? 0) * 100)}%</span>
           </div>
           <div class="ui-settings-row">
             <label>面板透明</label>
             <input type="range" min="0" max="100" value="${Math.round((config.cardAlpha ?? 0.85) * 100)}" 
-                   oninput="applyCardAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'"
+                   oninput="applyCardAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'" 
+                   onchange="saveCardAlpha(this.value)"
                    id="ui-card-alpha">
             <span class="ui-settings-value">${Math.round((config.cardAlpha ?? 0.85) * 100)}%</span>
           </div>
@@ -80,39 +88,47 @@ export async function render() {
           <span class="ui-settings-card-icon">🔍</span>
           <h3>透明度细调</h3>
         </div>
+        <div class="ui-settings-tips">
+          <p>💡 在全局透明度基础上，对各区域进行微调（+100% 到 -100%）</p>
+        </div>
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
             <label>侧边栏</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarFine ?? 0) * 100)}" 
-                   oninput="applyNavSidebarFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyNavSidebarFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveNavSidebarFine(this.value)"
                    id="ui-sidebar-fine">
             <span class="ui-settings-value">${(config.navSidebarFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>主区域</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.mainFine ?? 0) * 100)}" 
-                   oninput="applyMainFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyMainFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveMainFine(this.value)"
                    id="ui-main-fine">
             <span class="ui-settings-value">${(config.mainFine ?? 0) > 0 ? '+' : ''}${(config.mainFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>消息列表</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.messagesFine ?? 0) * 100)}" 
-                   oninput="applyMessagesFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyMessagesFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveMessagesFine(this.value)"
                    id="ui-messages-fine">
             <span class="ui-settings-value">${(config.messagesFine ?? 0) > 0 ? '+' : ''}${(config.messagesFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>会话列表</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.sessionFine ?? 0) * 100)}" 
-                   oninput="applySessionFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applySessionFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveSessionFine(this.value)"
                    id="ui-session-fine">
             <span class="ui-settings-value">${(config.sessionFine ?? 0) > 0 ? '+' : ''}${(config.sessionFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>输入区域</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.inputFine ?? 0) * 100)}" 
-                   oninput="applyInputFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyInputFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveInputFine(this.value)"
                    id="ui-input-fine">
             <span class="ui-settings-value">${(config.inputFine ?? 0) > 0 ? '+' : ''}${(config.inputFine ?? 0) * 100}%</span>
           </div>
@@ -125,39 +141,47 @@ export async function render() {
           <span class="ui-settings-card-icon">✨</span>
           <h3>模糊度细调</h3>
         </div>
+        <div class="ui-settings-tips">
+          <p>💡 在全局模糊度基础上，对各区域进行微调（+100% 到 -100%）</p>
+        </div>
         <div class="ui-settings-card-body">
           <div class="ui-settings-row">
             <label>侧边栏</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarBlurFine ?? 0) * 100)}" 
-                   oninput="applyNavSidebarBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyNavSidebarBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveNavSidebarBlurFine(this.value)"
                    id="ui-sidebar-blur-fine">
             <span class="ui-settings-value">${(config.navSidebarBlurFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarBlurFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>主区域</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.mainBlurFine ?? 0) * 100)}" 
-                   oninput="applyMainBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyMainBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveMainBlurFine(this.value)"
                    id="ui-main-blur-fine">
             <span class="ui-settings-value">${(config.mainBlurFine ?? 0) > 0 ? '+' : ''}${(config.mainBlurFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>消息列表</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.messagesBlurFine ?? 0) * 100)}" 
-                   oninput="applyMessagesBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyMessagesBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveMessagesBlurFine(this.value)"
                    id="ui-messages-blur-fine">
             <span class="ui-settings-value">${(config.messagesBlurFine ?? 0) > 0 ? '+' : ''}${(config.messagesBlurFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>会话列表</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.sessionBlurFine ?? 0) * 100)}" 
-                   oninput="applySessionBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applySessionBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveSessionBlurFine(this.value)"
                    id="ui-session-blur-fine">
             <span class="ui-settings-value">${(config.sessionBlurFine ?? 0) > 0 ? '+' : ''}${(config.sessionBlurFine ?? 0) * 100}%</span>
           </div>
           <div class="ui-settings-row">
             <label>输入区域</label>
             <input type="range" min="-100" max="100" value="${Math.round((config.inputBlurFine ?? 0) * 100)}" 
-                   oninput="applyInputBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'"
+                   oninput="applyInputBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" 
+                   onchange="saveInputBlurFine(this.value)"
                    id="ui-input-blur-fine">
             <span class="ui-settings-value">${(config.inputBlurFine ?? 0) > 0 ? '+' : ''}${(config.inputBlurFine ?? 0) * 100}%</span>
           </div>
@@ -439,6 +463,7 @@ window.applyBgBrightness = applyBgBrightness
 window.applyBgImage = applyBgImage
 window.applyBubbleStyle = applyBubbleStyle
 window.applyCardAlpha = applyCardAlpha
+window.saveCardAlpha = saveCardAlpha
 window.applySoundPreset = applySoundPreset
 window.applySoundVolume = applySoundVolume
 window.handleBgImageSelect = handleBgImageSelect

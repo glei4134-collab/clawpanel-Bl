@@ -66,6 +66,7 @@ export function saveUIConfig(config) {
 // ============ 音效系统 ============
 let _audioContext = null
 let _clickBuffer = null
+let _tempClickVolume = null
 let _audioInitialized = false
 
 const SOUND_PRESETS = {
@@ -133,7 +134,7 @@ export function initAudioContext() {
 
 export function playClickSound() {
   const config = getUIConfig()
-  if (!config.clickSound || config.soundPreset === 'none' || config.clickSoundVolume === 0) return
+  if (!config.clickSound || config.soundPreset === 'none') return
   
   try {
     if (!_audioContext) {
@@ -147,7 +148,9 @@ export function playClickSound() {
     const gainNode = _audioContext.createGain()
     
     source.buffer = _clickBuffer
-    gainNode.gain.value = config.clickSoundVolume || 0.6
+    const volume = _tempClickVolume ?? config.clickSoundVolume ?? 0.6
+    if (volume === 0) return
+    gainNode.gain.value = volume
     
     source.connect(gainNode)
     gainNode.connect(_audioContext.destination)

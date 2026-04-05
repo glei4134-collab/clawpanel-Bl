@@ -4,6 +4,7 @@
  */
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { icon } from '../lib/icons.js'
 import { t } from '../lib/i18n.js'
 
@@ -126,13 +127,7 @@ function renderMessages(el) {
       </div>
       <div class="form-group">
         <label class="form-label">${t('communication.ackScope')}</label>
-        <select class="form-input" id="msg-ackReactionScope" style="max-width:300px">
-          <option value="group-mentions" ${(m.ackReactionScope || 'group-mentions') === 'group-mentions' ? 'selected' : ''}>${t('communication.ackScopeGroupMentions')}</option>
-          <option value="group-all" ${m.ackReactionScope === 'group-all' ? 'selected' : ''}>${t('communication.ackScopeGroupAll')}</option>
-          <option value="direct" ${m.ackReactionScope === 'direct' ? 'selected' : ''}>${t('communication.ackScopeDirect')}</option>
-          <option value="all" ${m.ackReactionScope === 'all' ? 'selected' : ''}>${t('communication.ackScopeAll')}</option>
-          <option value="off" ${m.ackReactionScope === 'off' ? 'selected' : ''}>${t('communication.ackScopeOff')}</option>
-        </select>
+        <div id="msg-ackReactionScope-select" style="max-width:300px"></div>
       </div>
       <div class="form-group" style="display:flex;align-items:center;justify-content:space-between">
         <div>
@@ -184,10 +179,29 @@ function renderMessages(el) {
       </div>
     </div>
   `
-  el.querySelectorAll('input, select').forEach(inp => {
+  el.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('change', markDirty)
     inp.addEventListener('input', markDirty)
   })
+  
+  // 创建 msg-ackReactionScope 自定义选择器
+  const ackScopeContainer = el.querySelector('#msg-ackReactionScope-select')
+  if (ackScopeContainer) {
+    const ackScopeSelect = createCustomSelect([
+      { value: 'group-mentions', label: t('communication.ackScopeGroupMentions') },
+      { value: 'group-all', label: t('communication.ackScopeGroupAll') },
+      { value: 'direct', label: t('communication.ackScopeDirect') },
+      { value: 'all', label: t('communication.ackScopeAll') },
+      { value: 'off', label: t('communication.ackScopeOff') }
+    ], {
+      value: m.ackReactionScope || 'group-mentions',
+      onchange: (val) => {
+        m.ackReactionScope = val
+        markDirty()
+      }
+    })
+    ackScopeContainer.appendChild(ackScopeSelect.container)
+  }
 }
 
 function collectMessages() {
@@ -201,7 +215,7 @@ function collectMessages() {
   const m = _config.messages
   m.responsePrefix = v('msg-responsePrefix')
   m.ackReaction = v('msg-ackReaction')
-  m.ackReactionScope = v('msg-ackReactionScope') || undefined
+  // msg-ackReactionScope 通过 onchange 直接修改 m，无需收集
   m.removeAckAfterReply = c('msg-removeAckAfterReply') || undefined
   m.suppressToolErrors = c('msg-suppressToolErrors') || undefined
 
@@ -234,26 +248,35 @@ function renderBroadcast(el) {
       <div class="config-section-title">${t('communication.broadcastStrategy')}</div>
       <div class="form-group">
         <label class="form-label">${t('communication.broadcastMode')}</label>
-        <select class="form-input" id="bc-strategy" style="max-width:300px">
-          <option value="parallel" ${(b.strategy || 'parallel') === 'parallel' ? 'selected' : ''}>${t('communication.broadcastParallel')}</option>
-          <option value="sequential" ${b.strategy === 'sequential' ? 'selected' : ''}>${t('communication.broadcastSequential')}</option>
-        </select>
+        <div id="bc-strategy-select" style="max-width:300px"></div>
         <div class="form-hint">${t('communication.broadcastHint')}</div>
       </div>
     </div>
   `
-  el.querySelectorAll('input, select').forEach(inp => {
+  el.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('change', markDirty)
   })
+  
+  // 创建 bc-strategy 自定义选择器
+  const bcContainer = el.querySelector('#bc-strategy-select')
+  if (bcContainer) {
+    const bcSelect = createCustomSelect([
+      { value: 'parallel', label: t('communication.broadcastParallel') },
+      { value: 'sequential', label: t('communication.broadcastSequential') }
+    ], {
+      value: b.strategy || 'parallel',
+      onchange: (val) => {
+        if (!_config.broadcast) _config.broadcast = {}
+        _config.broadcast.strategy = val
+        markDirty()
+      }
+    })
+    bcContainer.appendChild(bcSelect.container)
+  }
 }
 
 function collectBroadcast() {
-  if (!_config) return
-  const strategy = _page?.querySelector('#bc-strategy')?.value
-  if (strategy) {
-    if (!_config.broadcast) _config.broadcast = {}
-    _config.broadcast.strategy = strategy
-  }
+  // bc-strategy 通过 onchange 直接修改 _config.broadcast.strategy，无需收集
 }
 
 // ── 命令配置 ──
@@ -273,32 +296,36 @@ function renderCommands(el) {
       <div class="config-section-title">${t('communication.nativeCommands')}</div>
       <div class="form-group">
         <label class="form-label">${t('communication.nativeLabel')}</label>
-        <select class="form-input" id="cmd-native" style="max-width:200px">
-          <option value="auto" ${(cmd.native === 'auto' || cmd.native === undefined) ? 'selected' : ''}>${t('communication.nativeAuto')}</option>
-          <option value="true" ${cmd.native === true ? 'selected' : ''}>${t('communication.nativeEnabled')}</option>
-          <option value="false" ${cmd.native === false ? 'selected' : ''}>${t('communication.nativeDisabled')}</option>
-        </select>
+        <div id="cmd-native-select" style="max-width:200px"></div>
         <div class="form-hint">${t('communication.nativeHint')}</div>
       </div>
     </div>
   `
-  el.querySelectorAll('input, select').forEach(inp => {
+  el.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('change', markDirty)
   })
+  
+  // 创建 cmd-native 自定义选择器
+  const cmdNativeContainer = el.querySelector('#cmd-native-select')
+  if (cmdNativeContainer) {
+    const cmdNativeSelect = createCustomSelect([
+      { value: 'auto', label: t('communication.nativeAuto') },
+      { value: 'true', label: t('communication.nativeEnabled') },
+      { value: 'false', label: t('communication.nativeDisabled') }
+    ], {
+      value: cmd.native === true ? 'true' : cmd.native === false ? 'false' : 'auto',
+      onchange: (val) => {
+        if (!_config.commands) _config.commands = {}
+        _config.commands.native = val === 'true' ? true : val === 'false' ? false : 'auto'
+        markDirty()
+      }
+    })
+    cmdNativeContainer.appendChild(cmdNativeSelect.container)
+  }
 }
 
 function collectCommands() {
-  if (!_config) return
-  const c = (id) => _page?.querySelector('#' + id)?.checked
-  if (!_config.commands) _config.commands = {}
-  const cmd = _config.commands
-  cmd.text = c('cmd-text') === false ? false : undefined
-  cmd.bash = c('cmd-bash') || undefined
-  cmd.config = c('cmd-config') || undefined
-  cmd.debug = c('cmd-debug') || undefined
-  cmd.restart = c('cmd-restart') === false ? false : undefined
-  const native = _page?.querySelector('#cmd-native')?.value
-  cmd.native = native === 'true' ? true : native === 'false' ? false : 'auto'
+  // cmd-native 通过 onchange 直接修改 _config.commands.native，无需收集
 }
 
 // ── Webhook ──
@@ -361,16 +388,31 @@ function renderApprovals(el) {
       ${toggleRow('approvals-enabled', t('communication.approvalsEnabled'), t('communication.approvalsEnabledHint'), !!a.enabled)}
       <div class="form-group">
         <label class="form-label">${t('communication.approvalsMode')}</label>
-        <select class="form-input" id="approvals-mode" style="max-width:300px">
-          <option value="session" ${(a.mode || 'session') === 'session' ? 'selected' : ''}>${t('communication.approvalsModeSession')}</option>
-          <option value="targets" ${a.mode === 'targets' ? 'selected' : ''}>${t('communication.approvalsModeTargets')}</option>
-          <option value="both" ${a.mode === 'both' ? 'selected' : ''}>${t('communication.approvalsModeBoth')}</option>
-        </select>
+        <div id="approvals-mode-select" style="max-width:300px"></div>
       </div>
       ${toggleRow('approvals-forwardExec', t('communication.approvalsForwardExec'), t('communication.approvalsForwardExecHint'), !!a.enabled)}
     </div>
   `
-  el.querySelectorAll('input, select').forEach(inp => {
+  
+  const modeContainer = el.querySelector('#approvals-mode-select')
+  if (modeContainer) {
+    const modeSelect = createCustomSelect([
+      { value: 'session', label: t('communication.approvalsModeSession') },
+      { value: 'targets', label: t('communication.approvalsModeTargets') },
+      { value: 'both', label: t('communication.approvalsModeBoth') }
+    ], {
+      value: a.mode || 'session',
+      onchange: (val) => {
+        if (!_config.approvals) _config.approvals = {}
+        if (!_config.approvals.exec) _config.approvals.exec = {}
+        _config.approvals.exec.mode = val
+        markDirty()
+      }
+    })
+    modeContainer.appendChild(modeSelect.container)
+  }
+  
+  el.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('change', markDirty)
   })
 }
@@ -378,12 +420,11 @@ function renderApprovals(el) {
 function collectApprovals() {
   if (!_config) return
   const c = (id) => _page?.querySelector('#' + id)?.checked
-  const v = (id) => _page?.querySelector('#' + id)?.value
   if (!_config.approvals) _config.approvals = {}
   if (!_config.approvals.exec) _config.approvals.exec = {}
   const a = _config.approvals.exec
   a.enabled = c('approvals-enabled') || undefined
-  a.mode = v('approvals-mode') || undefined
+  // approvals-mode 通过 onchange 直接修改 _config.approvals.exec.mode，无需收集
 }
 
 // ── 工具函数 ──

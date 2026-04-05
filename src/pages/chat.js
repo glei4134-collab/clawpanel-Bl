@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 聊天页面 - 完整版，对接 OpenClaw Gateway
  * 支持：流式响应、Markdown 渲染、会话管理、Agent 选择、快捷指
  */
@@ -11,7 +11,8 @@ import { toast } from '../components/toast.js'
 import { showModal, showConfirm } from '../components/modal.js'
 import { icon as svgIcon } from '../lib/icons.js'
 import { t } from '../lib/i18n.js'
-import { getUIConfig, saveUIConfig, getAvailableBubbleStyles, getSoundPresets, applyUIConfig, playClickSound, initAudioContext, setupClickSounds, applyBgImage, applySidebarAlpha, saveBgImage, getSessionBgImage, applyChatMainAlpha, applySessionListAlpha, applyBubbleStyle, applySoundPreset, applySoundVolume, applyBgBlur, applyBgBrightness, applyBgOpacity, applySidebarFine, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine } from '../lib/ui-custom.js'
+import { createCustomSelect } from '../components/custom-select.js'
+import { getUIConfig, saveUIConfig, getAvailableBubbleStyles, getSoundPresets, applyUIConfig, playClickSound, initAudioContext, setupClickSounds, applyBgImage, applySidebarAlpha, saveBgImage, getSessionBgImage, applyChatMainAlpha, applySessionListAlpha, applyBubbleStyle, applySoundPreset, applySoundVolume, applyBgBlur, applyBgBrightness, applyBgOpacity, applyGlobalAlpha, applyNavSidebarFine, applyMainFine, applyMessagesFine, applySessionFine, applyInputFine, applyNavSidebarBlurFine, applySidebarBlurFine, applyMainBlurFine, applyMessagesBlurFine, applySessionBlurFine, applyInputBlurFine, applyPanelAlpha, savePanelAlpha, saveSoundVolume, saveCursorTrailSize, saveCursorTrailDensity } from '../lib/ui-custom.js'
 
 const RENDER_THROTTLE = 30
 const STORAGE_SESSION_KEY = 'clawpanel-last-session'
@@ -733,6 +734,16 @@ let _splitDragging = false
 let _splitDragStart = 0
 let _splitDragRatio = 0.5
 
+let _leftIsSending = false
+let _leftIsStreaming = false
+let _leftCurrentAiBubble = null
+let _leftCurrentAiText = ''
+
+let _rightIsSending = false
+let _rightIsStreaming = false
+let _rightCurrentAiBubble = null
+let _rightCurrentAiText = ''
+
 function toggleSplitView(force) {
   if (_splitOpen) {
     // Close split view
@@ -750,17 +761,29 @@ function toggleSplitView(force) {
   showSplitSessionSelector()
 }
 
-function showSplitSessionSelector() {
-  // Get session list
-  const sessions = JSON.parse(localStorage.getItem(STORAGE_SESSION_NAMES_KEY) || '{}')
-  const keys = Object.keys(sessions)
+async function showSplitSessionSelector() {
+  if (!wsClient.gatewayReady) {
+    toast('Gateway 未就绪，无法获取会话列表', 'warning')
+    return
+  }
   
-  if (keys.length === 0) {
+  let sessions = []
+  try {
+    const result = await wsClient.sessionsList(50)
+    sessions = result?.sessions || result || []
+  } catch (e) {
+    console.error('[chat] 获取会话列表失败:', e)
+    toast('获取会话列表失败', 'error')
+    return
+  }
+  
+  if (sessions.length === 0) {
     toast('没有可用的会话', 'warning')
     return
   }
   
-  // Build selector HTML
+  sessions.sort((a, b) => (b.updatedAt || b.lastActivity || 0) - (a.updatedAt || a.lastActivity || 0))
+  
   const overlay = document.createElement('div')
   overlay.id = 'split-session-overlay'
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);'
@@ -768,20 +791,28 @@ function showSplitSessionSelector() {
   const panel = document.createElement('div')
   panel.style.cssText = 'background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-radius:16px;padding:24px;max-width:400px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.3);'
   
+  const sessionNames = getSessionNames()
+  
   let html = `
     <h3 style="margin:0 0 16px;font-size:18px;color:#1f2937;">选择分屏会话</h3>
-    <p style="margin:0 0 16px;font-size:13px;color:#6b7280;">左侧将保持当前会话，右侧显示选中的会/p>
-    <div style="display:flex;flex-direction:column;gap:8px;">
+    <p style="margin:0 0 16px;font-size:13px;color:#6b7280;">左侧保持当前会话，右侧显示选中的会话</p>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
   `
   
-  for (const key of keys) {
-    const name = sessions[key] || key
-    const isCurrent = key === (_currentSessionKey || '')
+  for (const s of sessions) {
+    const key = s.sessionKey || s.key || ''
+    if (!key || key === _sessionKey) continue
+    
+    const customName = sessionNames[key]
+    const label = parseSessionLabel(key)
+    const displayName = customName || label || key
+    const ts = s.updatedAt || s.lastActivity || s.createdAt || 0
+    const timeStr = ts ? formatSessionTime(ts) : ''
+    
     html += `
-      <div class="split-session-option" data-key="${key}" style="padding:12px 16px;border-radius:10px;cursor:pointer;background:${isCurrent ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.5)'};border:1px solid ${isCurrent ? 'rgba(99,102,241,0.3)' : 'rgba(0,0,0,0.08)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='${isCurrent ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.5)'}'">
-        <div style="font-size:14px;font-weight:500;color:#1f2937;">${name}</div>
-        <div style="font-size:11px;color:#9ca3af;margin-top:2px;">${key}</div>
-        ${isCurrent ? '<div style="font-size:11px;color:#6366f1;margin-top:4px;">当前会话</div>' : ''}
+      <div class="split-session-option" data-key="${key}" style="padding:12px 16px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,0.5);border:1px solid rgba(0,0,0,0.08);transition:all 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.5)'">
+        <div style="font-size:14px;font-weight:500;color:#1f2937;">${displayName}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px;">${timeStr ? timeStr + ' · ' : ''}${key}</div>
       </div>
     `
   }
@@ -832,37 +863,38 @@ function renderSplitView() {
   const chatMain = page.querySelector('.chat-main')
   if (!chatMain) return
   
-  // Remove existing split wrapper if any
   const existingWrapper = page.querySelector('.chat-split-wrapper')
   if (existingWrapper) existingWrapper.remove()
   
   if (_splitOpen && _splitSessionKey) {
-    // Create split structure
     const splitWrapper = document.createElement('div')
     splitWrapper.className = 'chat-split-wrapper'
     splitWrapper.style.cssText = 'display:flex;flex:1;min-height:0;overflow:hidden;'
     
-    // Left panel (current session)
     const leftPanel = document.createElement('div')
     leftPanel.className = 'chat-split-panel'
     leftPanel.id = 'chat-split-left'
     leftPanel.style.cssText = `flex:${_splitRatio};min-width:200px;display:flex;flex-direction:column;min-height:0;overflow:hidden;`
+    
+    const leftHeader = createSplitPanelHeader(_sessionKey, 'left')
+    leftPanel.appendChild(leftHeader)
     
     const leftContent = chatMain.cloneNode(true)
     leftContent.id = 'chat-main-left'
     leftContent.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;'
     leftPanel.appendChild(leftContent)
     
-    // Divider
     const divider = document.createElement('div')
     divider.id = 'chat-split-divider'
     divider.style.cssText = 'width:4px;background:var(--border-primary);cursor:col-resize;flex-shrink:0;transition:background 0.15s;z-index:10;'
     
-    // Right panel (selected session)
     const rightPanel = document.createElement('div')
     rightPanel.className = 'chat-split-panel'
     rightPanel.id = 'chat-split-right'
     rightPanel.style.cssText = `flex:${1 - _splitRatio};min-width:200px;display:flex;flex-direction:column;min-height:0;overflow:hidden;`
+    
+    const rightHeader = createSplitPanelHeader(_splitSessionKey, 'right')
+    rightPanel.appendChild(rightHeader)
     
     const rightContent = chatMain.cloneNode(true)
     rightContent.id = 'chat-main-right'
@@ -876,14 +908,131 @@ function renderSplitView() {
     chatMain.style.display = 'none'
     page.insertBefore(splitWrapper, chatMain)
     
-    // Setup divider drag
     setupSplitDivider(divider)
-    
-    // Setup right panel events and load the selected session
-    setupSplitPanelEvents()
+    setupLeftPanelEvents()
+    setupRightPanelEvents()
+    loadSplitSessionsOptions()
     
   } else {
     chatMain.style.display = ''
+  }
+}
+
+function createSplitPanelHeader(sessionKey, side) {
+  const header = document.createElement('div')
+  header.className = 'split-panel-header'
+  header.style.cssText = 'display:flex;align-items:center;padding:8px 12px;background:rgba(128,128,128,0.1);border-bottom:1px solid var(--border-primary);gap:8px;'
+  
+  const label = document.createElement('span')
+  label.style.cssText = 'font-size:11px;color:var(--text-secondary);flex-shrink:0;'
+  label.textContent = side === 'left' ? '当前' : '分屏'
+  
+  const selectWrapper = document.createElement('div')
+  selectWrapper.id = `split-session-wrapper-${side}`
+  selectWrapper.style.cssText = 'flex:1;min-width:0;'
+  
+  header.appendChild(label)
+  header.appendChild(selectWrapper)
+  
+  return header
+}
+
+async function loadSplitSessionsOptions() {
+  if (!wsClient.gatewayReady) return
+  
+  try {
+    const result = await wsClient.sessionsList(50)
+    const sessions = result?.sessions || result || []
+    
+    const leftWrapper = document.getElementById('split-session-wrapper-left')
+    const rightWrapper = document.getElementById('split-session-wrapper-right')
+    
+    if (leftWrapper) {
+      const leftOptions = sessions.map(s => {
+        const key = s.sessionKey || s.key || ''
+        const label = parseSessionLabel(key)
+        return { value: key, label: label || key }
+      })
+      
+      const leftSelect = createCustomSelect(leftOptions, {
+        value: _sessionKey || '',
+        placeholder: '选择会话',
+        onchange: async (newKey) => {
+          if (newKey && newKey !== _sessionKey) {
+            await switchMainSession(newKey)
+          }
+        }
+      })
+      
+      leftWrapper.innerHTML = ''
+      leftWrapper.appendChild(leftSelect.container)
+    }
+    
+    if (rightWrapper) {
+      const rightOptions = sessions.map(s => {
+        const key = s.sessionKey || s.key || ''
+        const label = parseSessionLabel(key)
+        return { value: key, label: label || key }
+      })
+      
+      const rightSelect = createCustomSelect(rightOptions, {
+        value: _splitSessionKey || '',
+        placeholder: '选择会话',
+        onchange: async (newKey) => {
+          if (newKey && newKey !== _splitSessionKey) {
+            await switchSplitSession(newKey)
+          }
+        }
+      })
+      
+      rightWrapper.innerHTML = ''
+      rightWrapper.appendChild(rightSelect.container)
+    }
+  } catch (e) {
+    console.error('[chat] 加载会话选项失败:', e)
+  }
+}
+
+async function switchMainSession(newKey) {
+  if (!newKey || newKey === _sessionKey) return
+  
+  const leftPanel = document.getElementById('chat-split-left')
+  if (!leftPanel) return
+  
+  const leftMessages = leftPanel.querySelector('#left-messages-area')
+  if (!leftMessages) return
+  
+  leftMessages.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">加载中...</div>'
+  
+  try {
+    _sessionKey = newKey
+    localStorage.setItem('clawpanel-session-key', newKey)
+    const msgs = await getLocalMessages(_sessionKey)
+    renderSessionMessages(msgs)
+  } catch (e) {
+    leftMessages.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">加载失败</div>'
+  }
+}
+
+async function switchSplitSession(newKey) {
+  if (!newKey || newKey === _splitSessionKey) return
+  
+  _splitSessionKey = newKey
+  localStorage.setItem('clawpanel-split-key', newKey)
+  
+  const rightPanel = document.getElementById('chat-split-right')
+  if (!rightPanel) return
+  
+  const messages = rightPanel.querySelector('#split-messages-area')
+  if (!messages) return
+  
+  messages.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">加载中...</div>'
+  
+  try {
+    const msgs = await getLocalMessages(_splitSessionKey)
+    renderSplitMessages(messages, msgs)
+  } catch (e) {
+    messages.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">加载失败</div>'
   }
 }
 
@@ -903,6 +1052,58 @@ function setupSplitDivider(divider) {
   divider.addEventListener('mouseleave', () => {
     if (!_splitDragging) divider.style.background = 'var(--border-primary)'
   })
+  
+  divider.addEventListener('dblclick', () => {
+    setSplitRatio(0.5)
+  })
+}
+
+function setSplitRatio(ratio) {
+  _splitRatio = Math.max(0.2, Math.min(0.8, ratio))
+  const leftPanel = document.getElementById('chat-split-left')
+  const rightPanel = document.getElementById('chat-split-right')
+  if (leftPanel && rightPanel) {
+    leftPanel.style.flex = `${_splitRatio}`
+    rightPanel.style.flex = `${1 - _splitRatio}`
+  }
+  localStorage.setItem('clawpanel-split-ratio', String(_splitRatio))
+}
+
+function adjustSplitRatio(delta) {
+  setSplitRatio(_splitRatio + delta)
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === '\\') {
+    e.preventDefault()
+    toggleSplitView()
+    return
+  }
+  
+  if (_splitOpen) {
+    if (e.ctrlKey && e.key === '[') {
+      e.preventDefault()
+      adjustSplitRatio(-0.05)
+      return
+    }
+    if (e.ctrlKey && e.key === ']') {
+      e.preventDefault()
+      adjustSplitRatio(0.05)
+      return
+    }
+  }
+})
+
+const SNAP_POINTS = [0.25, 0.5, 0.75]
+const SNAP_THRESHOLD = 0.03
+
+function applySnap(ratio) {
+  for (const snap of SNAP_POINTS) {
+    if (Math.abs(ratio - snap) < SNAP_THRESHOLD) {
+      return snap
+    }
+  }
+  return ratio
 }
 
 document.addEventListener('mousemove', (e) => {
@@ -913,9 +1114,9 @@ document.addEventListener('mousemove', (e) => {
   
   const rect = wrapper.getBoundingClientRect()
   const delta = e.clientX - _splitDragStart
-  const ratio = _splitDragRatio + delta / rect.width
+  const rawRatio = _splitDragRatio + delta / rect.width
   
-  _splitRatio = Math.max(0.2, Math.min(0.8, ratio))
+  _splitRatio = applySnap(Math.max(0.2, Math.min(0.8, rawRatio)))
   
   const leftPanel = document.getElementById('chat-split-left')
   const rightPanel = document.getElementById('chat-split-right')
@@ -925,6 +1126,7 @@ document.addEventListener('mousemove', (e) => {
   }
   
   localStorage.setItem('clawpanel-split-ratio', String(_splitRatio))
+  updateSplitIndicator()
 })
 
 document.addEventListener('mouseup', () => {
@@ -934,27 +1136,213 @@ document.addEventListener('mouseup', () => {
     document.body.style.userSelect = ''
     const divider = document.getElementById('chat-split-divider')
     if (divider) divider.style.background = 'var(--border-primary)'
+    hideSplitIndicator()
   }
 })
 
-function setupSplitPanelEvents() {
-  const rightPanel = document.getElementById('chat-main-right')
-  if (!rightPanel) return
+let _splitIndicatorTimeout = null
+
+function updateSplitIndicator() {
+  let indicator = document.getElementById('split-ratio-indicator')
+  if (!indicator) {
+    indicator = document.createElement('div')
+    indicator.id = 'split-ratio-indicator'
+    indicator.className = 'split-ratio-indicator'
+    document.body.appendChild(indicator)
+  }
   
-  // Update IDs to avoid conflicts
-  rightPanel.querySelectorAll('[id]').forEach(el => {
-    el.id = el.id.replace('chat-', 'split-')
+  const leftPercent = Math.round(_splitRatio * 100)
+  const rightPercent = 100 - leftPercent
+  indicator.innerHTML = `<span>${leftPercent}</span> : ${rightPercent}`
+  indicator.classList.add('visible')
+  
+  clearTimeout(_splitIndicatorTimeout)
+  _splitIndicatorTimeout = setTimeout(() => {
+    hideSplitIndicator()
+  }, 1500)
+}
+
+function hideSplitIndicator() {
+  const indicator = document.getElementById('split-ratio-indicator')
+  if (indicator) {
+    indicator.classList.remove('visible')
+  }
+}
+
+function setupLeftPanelEvents() {
+  const leftPanel = document.getElementById('chat-split-left')
+  if (!leftPanel) return
+  
+  leftPanel.querySelectorAll('[id]').forEach(el => {
+    if (el.id.startsWith('chat-')) {
+      el.id = el.id.replace('chat-', 'left-')
+    }
   })
   
-  // Setup input
-  const input = rightPanel.querySelector('#split-input')
-  const sendBtn = rightPanel.querySelector('#split-send-btn')
-  const messages = rightPanel.querySelector('#split-messages')
+  const input = leftPanel.querySelector('#left-input')
+  const sendBtn = leftPanel.querySelector('#left-send-btn')
+  const messages = leftPanel.querySelector('#left-messages-area')
   
   if (input && sendBtn) {
     input.addEventListener('input', () => {
       sendBtn.disabled = !input.value.trim()
-      autoResizeTextarea(input)
+      input.style.height = 'auto'
+      input.style.height = Math.min(input.scrollHeight, 200) + 'px'
+    })
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (!sendBtn.disabled) sendLeftMessage(input, messages)
+      }
+    })
+    sendBtn.addEventListener('click', () => {
+      if (!sendBtn.disabled) sendLeftMessage(input, messages)
+    })
+  }
+}
+
+async function sendLeftMessage(input, messages) {
+  const text = input.value.trim()
+  if (!text || !_sessionKey) return
+  
+  if (_leftIsSending || _leftIsStreaming || _rightIsSending || _rightIsStreaming) {
+    toast('请等待当前消息发送完成', 'warning')
+    return
+  }
+  
+  input.value = ''
+  input.style.height = 'auto'
+  
+  const msgId = uuid()
+  const timestamp = Date.now()
+  
+  const userDiv = document.createElement('div')
+  userDiv.className = 'msg msg-user sending'
+  userDiv.dataset.msgId = msgId
+  userDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">发送中...</div></div>`
+  messages.appendChild(userDiv)
+  messages.scrollTop = messages.scrollHeight
+  
+  _leftCurrentAiBubble = document.createElement('div')
+  _leftCurrentAiBubble.className = 'msg msg-ai'
+  _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>`
+  messages.appendChild(_leftCurrentAiBubble)
+  messages.scrollTop = messages.scrollHeight
+  
+  _leftIsSending = true
+  _leftCurrentAiText = ''
+  
+  const isSameSession = _sessionKey === _splitSessionKey
+  let rightUserDiv = null
+  
+  if (isSameSession && _splitOpen) {
+    const rightMessages = document.querySelector('#split-messages-area')
+    if (rightMessages && rightMessages !== messages) {
+      rightUserDiv = document.createElement('div')
+      rightUserDiv.className = 'msg msg-user sending'
+      rightUserDiv.dataset.msgId = msgId
+      rightUserDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">发送中...</div></div>`
+      rightMessages.appendChild(rightUserDiv)
+      
+      _rightCurrentAiBubble = document.createElement('div')
+      _rightCurrentAiBubble.className = 'msg msg-ai'
+      _rightCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>`
+      rightMessages.appendChild(_rightCurrentAiBubble)
+      rightMessages.scrollTop = rightMessages.scrollHeight
+    }
+  }
+  
+  const onSuccess = () => {
+    userDiv.classList.remove('sending')
+    const timeEl = userDiv.querySelector('.msg-time')
+    if (timeEl) timeEl.textContent = formatTime(timestamp)
+    if (rightUserDiv) {
+      rightUserDiv.classList.remove('sending')
+      const rightTimeEl = rightUserDiv.querySelector('.msg-time')
+      if (rightTimeEl) rightTimeEl.textContent = formatTime(timestamp)
+    }
+  }
+  
+  const onError = (err) => {
+    toast(`发送失败: ${err.message}`, 'error')
+    
+    userDiv.classList.remove('sending')
+    userDiv.classList.add('send-failed')
+    userDiv.innerHTML = `
+      <div class="msg-bubble">
+        <div class="msg-text" style="opacity:0.5;text-decoration:line-through;">${escapeHtml(text)}</div>
+        <div class="msg-time" style="color:#ef4444;">
+          发送失败 
+          <button class="msg-retry-btn" style="background:none;border:none;color:var(--accent,#6366f1);cursor:pointer;padding:0 4px;font-size:11px;">重试</button> | 
+          <button class="msg-remove-btn" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:0 4px;font-size:11px;">撤回</button>
+        </div>
+      </div>
+    `
+    
+    userDiv.querySelector('.msg-retry-btn')?.addEventListener('click', () => {
+      userDiv.remove()
+      if (rightUserDiv) rightUserDiv.remove()
+      userDiv = null
+      rightUserDiv = null
+      _leftIsSending = false
+      _leftIsStreaming = false
+      _rightIsSending = false
+      _rightIsStreaming = false
+      input.value = text
+      input.focus()
+      sendLeftMessage(input, messages)
+    })
+    
+    userDiv.querySelector('.msg-remove-btn')?.addEventListener('click', () => {
+      userDiv.remove()
+      if (rightUserDiv) rightUserDiv.remove()
+    })
+    
+    if (rightUserDiv) {
+      rightUserDiv.classList.remove('sending')
+      rightUserDiv.classList.add('send-failed')
+      rightUserDiv.innerHTML = `
+        <div class="msg-bubble">
+          <div class="msg-text" style="opacity:0.5;text-decoration:line-through;">${escapeHtml(text)}</div>
+          <div class="msg-time" style="color:#ef4444;">发送失败</div>
+        </div>
+      `
+    }
+  }
+  
+  saveMessage({ id: msgId, sessionKey: _sessionKey, role: 'user', content: text, timestamp })
+    .then(() => wsClient.chatSend(_sessionKey, text))
+    .then(() => {
+      onSuccess()
+      _leftIsSending = false
+      _leftIsStreaming = true
+      if (isSameSession) {
+        _rightIsSending = false
+        _rightIsStreaming = true
+      }
+    })
+    .catch(onError)
+}
+
+function setupRightPanelEvents() {
+  const rightPanel = document.getElementById('chat-split-right')
+  if (!rightPanel) return
+  
+  rightPanel.querySelectorAll('[id]').forEach(el => {
+    if (el.id.startsWith('chat-')) {
+      el.id = el.id.replace('chat-', 'split-')
+    }
+  })
+  
+  const input = rightPanel.querySelector('#split-input')
+  const sendBtn = rightPanel.querySelector('#split-send-btn')
+  const messages = rightPanel.querySelector('#split-messages-area')
+  
+  if (input && sendBtn) {
+    input.addEventListener('input', () => {
+      sendBtn.disabled = !input.value.trim()
+      input.style.height = 'auto'
+      input.style.height = Math.min(input.scrollHeight, 200) + 'px'
     })
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -967,20 +1355,21 @@ function setupSplitPanelEvents() {
     })
   }
   
-  // Load the split session messages
   loadSplitSession()
 }
 
 async function loadSplitSession() {
   if (!_splitSessionKey) return
   
-  const messages = document.querySelector('#split-messages')
+  const rightPanel = document.getElementById('chat-split-right')
+  if (!rightPanel) return
+  
+  const messages = rightPanel.querySelector('#split-messages-area')
   if (!messages) return
   
   messages.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">加载会话..</div>'
   
   try {
-    // Load messages from localStorage or API
     const localMsgs = await getLocalMessages(_splitSessionKey)
     if (localMsgs && localMsgs.length > 0) {
       renderSplitMessages(messages, localMsgs)
@@ -993,7 +1382,18 @@ async function loadSplitSession() {
 }
 
 function renderSplitMessages(container, msgs) {
+  if (!container) {
+    console.error('[chat] 分屏消息容器不存在')
+    return
+  }
+  
   container.innerHTML = ''
+  
+  if (!msgs || msgs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">暂无消息</div>'
+    return
+  }
+  
   for (const msg of msgs) {
     const div = document.createElement('div')
     div.className = `msg msg-${msg.role === 'user' ? 'user' : 'ai'}`
@@ -1003,28 +1403,262 @@ function renderSplitMessages(container, msgs) {
   container.scrollTop = container.scrollHeight
 }
 
+function renderSessionMessages(msgs) {
+  const leftPanel = document.getElementById('chat-split-left')
+  if (!leftPanel) return
+  
+  const messages = leftPanel.querySelector('#left-messages-area')
+  if (!messages) return
+  
+  messages.innerHTML = ''
+  
+  if (!msgs || msgs.length === 0) {
+    messages.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">暂无消息</div>'
+    return
+  }
+  
+  for (const msg of msgs) {
+    const div = document.createElement('div')
+    div.className = `msg msg-${msg.role === 'user' ? 'user' : 'ai'}`
+    
+    if (msg.role === 'user') {
+      div.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(msg.content || '')}</div></div>`
+    } else {
+      div.innerHTML = `<div class="msg-bubble"><div class="msg-text">${renderMarkdown(msg.content || '')}</div></div>`
+    }
+    
+    messages.appendChild(div)
+  }
+  
+  messages.scrollTop = messages.scrollHeight
+}
+
 async function sendSplitMessage(input, messages) {
   const text = input.value.trim()
-  if (!text) return
+  if (!text || !_splitSessionKey) return
+  
+  if (_leftIsSending || _leftIsStreaming || _rightIsSending || _rightIsStreaming) {
+    toast('请等待当前消息发送完成', 'warning')
+    return
+  }
   
   input.value = ''
   input.style.height = 'auto'
   
-  // Add user message
-  const userDiv = document.createElement('div')
-  userDiv.className = 'msg msg-user'
-  userDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(text)}</div></div>`
-  messages.appendChild(userDiv)
+  const msgId = uuid()
+  const timestamp = Date.now()
   
-  // Add AI placeholder
-  const aiDiv = document.createElement('div')
-  aiDiv.className = 'msg msg-ai'
-  aiDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>`
-  messages.appendChild(aiDiv)
+  const userDiv = document.createElement('div')
+  userDiv.className = 'msg msg-user sending'
+  userDiv.dataset.msgId = msgId
+  userDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">发送中...</div></div>`
+  messages.appendChild(userDiv)
   messages.scrollTop = messages.scrollHeight
   
-  // TODO: Send to API
-  aiDiv.querySelector('.msg-text').innerHTML = '<p>分屏会话回复功能开发中</p>'
+  _rightCurrentAiBubble = document.createElement('div')
+  _rightCurrentAiBubble.className = 'msg msg-ai'
+  _rightCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>`
+  messages.appendChild(_rightCurrentAiBubble)
+  messages.scrollTop = messages.scrollHeight
+  
+  _rightIsSending = true
+  _rightCurrentAiText = ''
+  
+  const isSameSession = _sessionKey === _splitSessionKey
+  let leftUserDiv = null
+  
+  if (isSameSession && _splitOpen) {
+    const leftMessages = document.querySelector('#left-messages-area')
+    if (leftMessages && leftMessages !== messages) {
+      leftUserDiv = document.createElement('div')
+      leftUserDiv.className = 'msg msg-user sending'
+      leftUserDiv.dataset.msgId = msgId
+      leftUserDiv.innerHTML = `<div class="msg-bubble"><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">发送中...</div></div>`
+      leftMessages.appendChild(leftUserDiv)
+      
+      _leftCurrentAiBubble = document.createElement('div')
+      _leftCurrentAiBubble.className = 'msg msg-ai'
+      _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>`
+      leftMessages.appendChild(_leftCurrentAiBubble)
+      leftMessages.scrollTop = leftMessages.scrollHeight
+    }
+  }
+  
+  const onSuccess = () => {
+    userDiv.classList.remove('sending')
+    const timeEl = userDiv.querySelector('.msg-time')
+    if (timeEl) timeEl.textContent = formatTime(timestamp)
+    if (leftUserDiv) {
+      leftUserDiv.classList.remove('sending')
+      const leftTimeEl = leftUserDiv.querySelector('.msg-time')
+      if (leftTimeEl) leftTimeEl.textContent = formatTime(timestamp)
+    }
+  }
+  
+  const onError = (err) => {
+    toast(`发送失败: ${err.message}`, 'error')
+    
+    userDiv.classList.remove('sending')
+    userDiv.classList.add('send-failed')
+    userDiv.innerHTML = `
+      <div class="msg-bubble">
+        <div class="msg-text" style="opacity:0.5;text-decoration:line-through;">${escapeHtml(text)}</div>
+        <div class="msg-time" style="color:#ef4444;">
+          发送失败 
+          <button class="msg-retry-btn" style="background:none;border:none;color:var(--accent,#6366f1);cursor:pointer;padding:0 4px;font-size:11px;">重试</button> | 
+          <button class="msg-remove-btn" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:0 4px;font-size:11px;">撤回</button>
+        </div>
+      </div>
+    `
+    
+    userDiv.querySelector('.msg-retry-btn')?.addEventListener('click', () => {
+      userDiv.remove()
+      if (leftUserDiv) leftUserDiv.remove()
+      userDiv = null
+      leftUserDiv = null
+      _rightIsSending = false
+      _rightIsStreaming = false
+      _leftIsSending = false
+      _leftIsStreaming = false
+      input.value = text
+      input.focus()
+      sendSplitMessage(input, messages)
+    })
+    
+    userDiv.querySelector('.msg-remove-btn')?.addEventListener('click', () => {
+      userDiv.remove()
+      if (leftUserDiv) leftUserDiv.remove()
+    })
+    
+    if (leftUserDiv) {
+      leftUserDiv.classList.remove('sending')
+      leftUserDiv.classList.add('send-failed')
+      leftUserDiv.innerHTML = `
+        <div class="msg-bubble">
+          <div class="msg-text" style="opacity:0.5;text-decoration:line-through;">${escapeHtml(text)}</div>
+          <div class="msg-time" style="color:#ef4444;">发送失败</div>
+        </div>
+      `
+    }
+  }
+  
+  saveMessage({ id: msgId, sessionKey: _splitSessionKey, role: 'user', content: text, timestamp })
+    .then(() => wsClient.chatSend(_splitSessionKey, text))
+    .then(() => {
+      onSuccess()
+      _rightIsSending = false
+      _rightIsStreaming = true
+      if (isSameSession) {
+        _leftIsSending = false
+        _leftIsStreaming = true
+      }
+    })
+    .catch(onError)
+}
+
+const CHUNK_THRESHOLD = 50
+
+function handleSplitChatEvent(payload, state, runId) {
+  if (state === 'delta') {
+    const c = extractChatContent(payload.message)
+    const text = c?.text || ''
+    
+    if (_leftIsStreaming && _leftCurrentAiBubble) {
+      _leftCurrentAiText = text
+      
+      const bubbleText = _leftCurrentAiBubble.querySelector('.msg-text')?.textContent || ''
+      if (bubbleText.length > CHUNK_THRESHOLD) {
+        flushLeftChunk()
+      }
+      
+      const displayText = _leftCurrentAiText || ''
+      _leftCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(displayText)
+      const leftMessages = document.querySelector('#left-messages-area')
+      if (leftMessages) leftMessages.scrollTop = leftMessages.scrollHeight
+    }
+    
+    if (_rightIsStreaming && _rightCurrentAiBubble) {
+      _rightCurrentAiText = text
+      
+      const bubbleText = _rightCurrentAiBubble.querySelector('.msg-text')?.textContent || ''
+      if (bubbleText.length > CHUNK_THRESHOLD) {
+        flushRightChunk()
+      }
+      
+      const displayText = _rightCurrentAiText || ''
+      _rightCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(displayText)
+      const splitMessages = document.querySelector('#split-messages-area')
+      if (splitMessages) splitMessages.scrollTop = splitMessages.scrollHeight
+    }
+    return
+  }
+  
+  if (state === 'final') {
+    const c = extractChatContent(payload.message)
+    const finalText = c?.text || ''
+    
+    if (_leftIsStreaming && _leftCurrentAiBubble) {
+      _leftIsStreaming = false
+      const chunkText = _leftCurrentAiText || finalText
+      _leftCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
+      const leftMessages = document.querySelector('#left-messages-area')
+      if (leftMessages) leftMessages.scrollTop = leftMessages.scrollHeight
+      _leftCurrentAiBubble = null
+      _leftCurrentAiText = ''
+    }
+    
+    if (_rightIsStreaming && _rightCurrentAiBubble) {
+      _rightIsStreaming = false
+      const chunkText = _rightCurrentAiText || finalText
+      _rightCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
+      const splitMessages = document.querySelector('#split-messages-area')
+      if (splitMessages) splitMessages.scrollTop = splitMessages.scrollHeight
+      _rightCurrentAiBubble = null
+      _rightCurrentAiText = ''
+    }
+    
+    if (finalText) {
+      saveMessage({
+        id: uuid(), sessionKey: payload.sessionKey || _splitSessionKey, role: 'assistant', content: finalText, timestamp: Date.now()
+      })
+    }
+  }
+}
+
+function flushLeftChunk() {
+  if (!_leftCurrentAiBubble || !_leftCurrentAiText) return
+  
+  const chunkText = _leftCurrentAiText
+  _leftCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
+  
+  const leftMessages = document.querySelector('#left-messages-area')
+  if (!leftMessages) return
+  
+  const newBubble = document.createElement('div')
+  newBubble.className = 'msg msg-ai'
+  newBubble.innerHTML = '<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>'
+  leftMessages.appendChild(newBubble)
+  
+  _leftCurrentAiBubble = newBubble
+  _leftCurrentAiText = ''
+}
+
+function flushRightChunk() {
+  if (!_rightCurrentAiBubble || !_rightCurrentAiText) return
+  
+  const chunkText = _rightCurrentAiText
+  _rightCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
+  
+  const splitMessages = document.querySelector('#split-messages-area')
+  if (!splitMessages) return
+  
+  const newBubble = document.createElement('div')
+  newBubble.className = 'msg msg-ai'
+  newBubble.innerHTML = '<div class="msg-bubble"><div class="msg-text"><div class="typing-indicator" style="display:flex"><span></span><span></span><span></span></div></div></div>'
+  splitMessages.appendChild(newBubble)
+  
+  _rightCurrentAiBubble = newBubble
+  _rightCurrentAiText = ''
 }
 
 function updateSplitButton() {
@@ -1062,100 +1696,194 @@ function showUISettingsPanel() {
   
   const panel = document.createElement('div')
   panel.className = 'ui-settings-float-panel'
+  
+  // 点击外部关闭面板
+  window._uiSettingsClickOutsideHandler = (e) => {
+    if (!panel.contains(e.target)) {
+      hideUISettingsPanel()
+    }
+  }
+  setTimeout(() => document.addEventListener('click', window._uiSettingsClickOutsideHandler), 0)
+  
   panel.innerHTML = `
     <div class="ui-settings-float-header">
-      <span>UI 设置</span>
+      <span>🎨 UI 设置</span>
       <button class="ui-settings-float-close" onclick="hideUISettingsPanel()">&times;</button>
     </div>
     <div class="ui-settings-float-content">
       <div class="ui-settings-section">
-        <div class="ui-settings-section-title">气泡风格</div>
+        <div class="ui-settings-section-title">📱 本面板效果</div>
         <div class="ui-settings-row">
-          <select onchange="applyBubbleStyle(this.value)">
-            ${bubbleStyles.map(s => `<option value="${s.id}" ${config.bubbleStyle === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
-          </select>
+          <label>透明度</label>
+          <input type="range" min="0" max="100" value="${Math.round((config.panelAlpha ?? 0.95) * 100)}" 
+                 oninput="applyPanelAlpha(this.value); this.nextElementSibling.textContent = this.value + '%'" 
+                 onchange="savePanelAlpha(this.value)" 
+                 id="ui-panel-alpha">
+          <span>${Math.round((config.panelAlpha ?? 0.95) * 100)}%</span>
+        </div>
+        <div class="ui-settings-row">
+          <label>模糊度</label>
+          <input type="range" min="0" max="30" step="2" value="${config.panelBlur || 0}" 
+                 oninput="applyPanelBlur(this.value); this.nextElementSibling.textContent = this.value + 'px'" 
+                 onchange="savePanelBlur(this.value)" 
+                 id="ui-panel-blur">
+          <span>${config.panelBlur || 0}px</span>
         </div>
       </div>
       <div class="ui-settings-section">
-        <div class="ui-settings-section-title">音效</div>
+        <div class="ui-settings-section-title">💬 气泡风格</div>
         <div class="ui-settings-row">
-          <select onchange="applySoundPreset(this.value)">
-            ${soundPresets.map(s => `<option value="${s.id}" ${config.soundPreset === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
-          </select>
+          <div id="bubble-style-select" class="custom-select-container"></div>
+        </div>
+      </div>
+      <div class="ui-settings-section">
+        <div class="ui-settings-section-title">🔊 音效</div>
+        <div class="ui-settings-row">
+          <div id="sound-preset-select" class="custom-select-container"></div>
         </div>
         <div class="ui-settings-row">
           <label>音量</label>
-          <input type="range" id="ui-volume" min="10" max="100" value="${Math.round((config.clickSoundVolume || 0.6) * 100)}" oninput="applySoundVolume(this.value); document.getElementById('ui-volume-val').textContent = this.value + '%'">
+          <input type="range" id="ui-volume" min="10" max="100" value="${Math.round((config.clickSoundVolume || 0.6) * 100)}" 
+                 oninput="applySoundVolume(this.value); document.getElementById('ui-volume-val').textContent = this.value + '%'" 
+                 onchange="saveSoundVolume(this.value)">
           <span id="ui-volume-val">${Math.round((config.clickSoundVolume || 0.6) * 100)}%</span>
         </div>
       </div>
       <div class="ui-settings-section">
-        <div class="ui-settings-section-title">透明度细调</div>
+        <div class="ui-settings-section-title">🖱️ 光标尾巴</div>
         <div class="ui-settings-row">
-          <label>侧边栏</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarFine ?? 0) * 100)}" oninput="applyNavSidebarFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.navSidebarFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarFine ?? 0) * 100}%</span>
+          <label>开关</label>
+          <input type="checkbox" id="ui-cursor-trail-enabled" ${(window.__getCursorTrail()?.enabled ? 'checked' : '')} onchange="window.__setCursorTrail({ ...(window.__getCursorTrail() || {}), enabled: this.checked })">
         </div>
         <div class="ui-settings-row">
-          <label>主区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.mainFine ?? 0) * 100)}" oninput="applyMainFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.mainFine ?? 0) > 0 ? '+' : ''}${(config.mainFine ?? 0) * 100}%</span>
+          <label>颜色</label>
+          <input type="color" id="ui-cursor-trail-color" value="${window.__getCursorTrail()?.color || '#6366f1'}" onchange="window.__setCursorTrail({ ...(window.__getCursorTrail() || {}), color: this.value })">
         </div>
         <div class="ui-settings-row">
-          <label>消息区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.messagesFine ?? 0) * 100)}" oninput="applyMessagesFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.messagesFine ?? 0) > 0 ? '+' : ''}${(config.messagesFine ?? 0) * 100}%</span>
+          <label>大小</label>
+          <input type="range" min="4" max="16" value="${window.__getCursorTrail()?.size || 8}" 
+                 oninput="window.__setCursorTrail({ ...(window.__getCursorTrail() || {}), size: parseInt(this.value) }); this.nextElementSibling.textContent = this.value + 'px'" 
+                 onchange="saveCursorTrailSize(this.value)">
+          <span>${window.__getCursorTrail()?.size || 8}px</span>
         </div>
         <div class="ui-settings-row">
-          <label>会话列表</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.sessionFine ?? 0) * 100)}" oninput="applySessionFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.sessionFine ?? 0) > 0 ? '+' : ''}${(config.sessionFine ?? 0) * 100}%</span>
-        </div>
-        <div class="ui-settings-row">
-          <label>输入区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.inputFine ?? 0) * 100)}" oninput="applyInputFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.inputFine ?? 0) > 0 ? '+' : ''}${(config.inputFine ?? 0) * 100}%</span>
+          <label>密度</label>
+          <input type="range" min="1" max="5" value="${window.__getCursorTrail()?.density || 3}" 
+                 oninput="window.__setCursorTrail({ ...(window.__getCursorTrail() || {}), density: parseInt(this.value) }); this.nextElementSibling.textContent = this.value" 
+                 onchange="saveCursorTrailDensity(this.value)">
+          <span>${window.__getCursorTrail()?.density || 3}</span>
         </div>
       </div>
       <div class="ui-settings-section">
-        <div class="ui-settings-section-title">模糊度细调</div>
-        <div class="ui-settings-row">
-          <label>侧边栏</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarBlurFine ?? 0) * 100)}" oninput="applyNavSidebarBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.navSidebarBlurFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarBlurFine ?? 0) * 100}%</span>
-        </div>
-        <div class="ui-settings-row">
-          <label>主区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.mainBlurFine ?? 0) * 100)}" oninput="applyMainBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.mainBlurFine ?? 0) > 0 ? '+' : ''}${(config.mainBlurFine ?? 0) * 100}%</span>
-        </div>
-        <div class="ui-settings-row">
-          <label>消息区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.messagesBlurFine ?? 0) * 100)}" oninput="applyMessagesBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.messagesBlurFine ?? 0) > 0 ? '+' : ''}${(config.messagesBlurFine ?? 0) * 100}%</span>
-        </div>
-        <div class="ui-settings-row">
-          <label>会话列表</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.sessionBlurFine ?? 0) * 100)}" oninput="applySessionBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.sessionBlurFine ?? 0) > 0 ? '+' : ''}${(config.sessionBlurFine ?? 0) * 100}%</span>
-        </div>
-        <div class="ui-settings-row">
-          <label>输入区域</label>
-          <input type="range" min="-100" max="100" value="${Math.round((config.inputBlurFine ?? 0) * 100)}" oninput="applyInputBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'">
-          <span>${(config.inputBlurFine ?? 0) > 0 ? '+' : ''}${(config.inputBlurFine ?? 0) * 100}%</span>
+        <div class="ui-settings-section-title">🔍 透明度细调</div>
+        <div class="ui-settings-grid">
+          <div class="ui-settings-row">
+            <label>侧边栏</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarFine ?? 0) * 100)}" oninput="applyNavSidebarFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveNavSidebarFine(this.value)">
+            <span>${(config.navSidebarFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>主区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.mainFine ?? 0) * 100)}" oninput="applyMainFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveMainFine(this.value)">
+            <span>${(config.mainFine ?? 0) > 0 ? '+' : ''}${(config.mainFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>消息区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.messagesFine ?? 0) * 100)}" oninput="applyMessagesFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveMessagesFine(this.value)">
+            <span>${(config.messagesFine ?? 0) > 0 ? '+' : ''}${(config.messagesFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>会话列表</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.sessionFine ?? 0) * 100)}" oninput="applySessionFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveSessionFine(this.value)">
+            <span>${(config.sessionFine ?? 0) > 0 ? '+' : ''}${(config.sessionFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>输入区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.inputFine ?? 0) * 100)}" oninput="applyInputFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveInputFine(this.value)">
+            <span>${(config.inputFine ?? 0) > 0 ? '+' : ''}${(config.inputFine ?? 0) * 100}%</span>
+          </div>
         </div>
       </div>
       <div class="ui-settings-section">
-        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="saveAllUISettings()">保存全部设置</button>
+        <div class="ui-settings-section-title">✨ 模糊度细调</div>
+        <div class="ui-settings-grid">
+          <div class="ui-settings-row">
+            <label>侧边栏</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.navSidebarBlurFine ?? 0) * 100)}" oninput="applyNavSidebarBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveNavSidebarBlurFine(this.value)">
+            <span>${(config.navSidebarBlurFine ?? 0) > 0 ? '+' : ''}${(config.navSidebarBlurFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>主区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.mainBlurFine ?? 0) * 100)}" oninput="applyMainBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveMainBlurFine(this.value)">
+            <span>${(config.mainBlurFine ?? 0) > 0 ? '+' : ''}${(config.mainBlurFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>消息区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.messagesBlurFine ?? 0) * 100)}" oninput="applyMessagesBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveMessagesBlurFine(this.value)">
+            <span>${(config.messagesBlurFine ?? 0) > 0 ? '+' : ''}${(config.messagesBlurFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>会话列表</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.sessionBlurFine ?? 0) * 100)}" oninput="applySessionBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveSessionBlurFine(this.value)">
+            <span>${(config.sessionBlurFine ?? 0) > 0 ? '+' : ''}${(config.sessionBlurFine ?? 0) * 100}%</span>
+          </div>
+          <div class="ui-settings-row">
+            <label>输入区域</label>
+            <input type="range" min="-100" max="100" value="${Math.round((config.inputBlurFine ?? 0) * 100)}" oninput="applyInputBlurFine(this.value); this.nextElementSibling.textContent = (this.value > 0 ? '+' : '') + this.value + '%'" onchange="saveInputBlurFine(this.value)">
+            <span>${(config.inputBlurFine ?? 0) > 0 ? '+' : ''}${(config.inputBlurFine ?? 0) * 100}%</span>
+          </div>
+        </div>
+      </div>
+      <div class="ui-settings-section">
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="saveAllUISettings()">💾 保存全部设置</button>
       </div>
     </div>
   `
   
   document.body.appendChild(panel)
+  
+  setTimeout(() => initUISettingsSelects(), 0)
+  
   _uiSettingsOpen = true
 }
 
+function initUISettingsSelects() {
+  const config = getUIConfig()
+  const bubbleStyles = getAvailableBubbleStyles()
+  const soundPresets = getSoundPresets()
+  
+  const bubbleContainer = document.getElementById('bubble-style-select')
+  if (bubbleContainer) {
+    const bubbleSelect = createCustomSelect(
+      bubbleStyles.map(s => ({ value: s.id, label: s.name })),
+      {
+        value: config.bubbleStyle || 'modern',
+        onchange: (val) => applyBubbleStyle(val)
+      }
+    )
+    bubbleContainer.innerHTML = ''
+    bubbleContainer.appendChild(bubbleSelect.container)
+  }
+  
+  const soundContainer = document.getElementById('sound-preset-select')
+  if (soundContainer) {
+    const soundSelect = createCustomSelect(
+      soundPresets.map(s => ({ value: s.id, label: s.name })),
+      {
+        value: config.soundPreset || 'click',
+        onchange: (val) => applySoundPreset(val)
+      }
+    )
+    soundContainer.innerHTML = ''
+    soundContainer.appendChild(soundSelect.container)
+  }
+}
+
 function hideUISettingsPanel() {
+  if (window._uiSettingsClickOutsideHandler) {
+    document.removeEventListener('click', window._uiSettingsClickOutsideHandler)
+    window._uiSettingsClickOutsideHandler = null
+  }
   const panel = document.querySelector('.ui-settings-float-panel')
   if (panel) panel.remove()
   _uiSettingsOpen = false
@@ -2131,13 +2859,16 @@ function handleEvent(msg) {
 }
 
 function handleChatEvent(payload) {
-  // sessionKey 过滤
-  if (payload.sessionKey && payload.sessionKey !== _sessionKey && _sessionKey) return
-
   const { state } = payload
   const runId = payload.runId
+  
+  if (payload.sessionKey && payload.sessionKey === _splitSessionKey && _splitOpen) {
+    handleSplitChatEvent(payload, state, runId)
+    return
+  }
+  
+  if (payload.sessionKey && payload.sessionKey !== _sessionKey && _sessionKey) return
 
-  // 重复 run 过滤：跳过已完成runId 的后续事件（Gateway 可能对同一消息触发多个 run
   if (runId && state === 'final' && _seenRunIds.has(runId)) {
     console.log('[chat] 跳过重复 final, runId:', runId)
     return
@@ -2165,11 +2896,10 @@ function handleChatEvent(payload) {
         updateSendState()
       }
       _currentAiText = c.text
-      // 每次收到 delta 重置安全超时0s 无新 delta 则强制结束）
       clearTimeout(_streamSafetyTimer)
       _streamSafetyTimer = setTimeout(() => {
         if (_isStreaming) {
-          console.warn('[chat] 流式输出超时0s 无新数据），强制结束')
+          console.warn('[chat] 流式输出超时（90s 无新数据），强制结束')
           if (_currentAiBubble && _currentAiText) {
             _currentAiBubble.innerHTML = renderMarkdown(_currentAiText)
           }
@@ -2202,9 +2932,7 @@ function handleChatEvent(payload) {
     if (finalFiles.length) _currentAiFiles = finalFiles
     if (finalTools.length) _currentAiTools = finalTools
     const hasContent = finalText || _currentAiImages.length || _currentAiVideos.length || _currentAiAudios.length || _currentAiFiles.length || _currentAiTools.length
-    // 忽略final（Gateway 会为一条消息触发多run，部分是final
     if (!_currentAiBubble && !hasContent) return
-    // 标记 runId 为已处理，防止重
     if (runId) {
       _seenRunIds.add(runId)
       if (_seenRunIds.size > 200) {

@@ -3,6 +3,7 @@
  */
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { t } from '../lib/i18n.js'
 
 // 兼容新版 SecretRef：token 可能是 string 或 { $env: "VAR" } / { $ref: "x/y" }
@@ -211,11 +212,7 @@ function renderConfig(page, state) {
       </div>
       <div class="form-group">
         <label class="form-label">${t('gateway.sessionsLabel')}</label>
-        <select class="form-input" id="gw-sessions-visibility" style="width:auto;min-width:180px">
-          <option value="all" ${(gw.tools?.sessions?.visibility || 'all') === 'all' ? 'selected' : ''}>${t('gateway.sessionsAll')}</option>
-          <option value="own" ${gw.tools?.sessions?.visibility === 'own' ? 'selected' : ''}>${t('gateway.sessionsOwn')}</option>
-          <option value="none" ${gw.tools?.sessions?.visibility === 'none' ? 'selected' : ''}>${t('gateway.sessionsNone')}</option>
-        </select>
+        <div id="gw-sessions-visibility-container" style="min-width:180px"></div>
         <div class="form-hint">${t('gateway.sessionsHint')}</div>
       </div>
     </div>
@@ -239,10 +236,10 @@ function renderConfig(page, state) {
     </div>
   `
 
-  bindConfigEvents(el)
+  bindConfigEvents(el, state)
 }
 
-function bindConfigEvents(el) {
+function bindConfigEvents(el, state) {
   // 密码显示/隐藏
   function bindToggle(btnId, inputId) {
     const btn = el.querySelector('#' + btnId)
@@ -289,6 +286,21 @@ function bindConfigEvents(el) {
     const visible = panel.style.display !== 'none'
     panel.style.display = visible ? 'none' : 'block'
     toggle.classList.toggle('open', !visible)
+  }
+
+  // 创建 sessions-visibility 自定义选择器
+  const sessionsContainer = el.querySelector('#gw-sessions-visibility-container')
+  if (sessionsContainer) {
+    const visibility = state?.config?.tools?.sessions?.visibility || 'all'
+    const sessionsSelect = createCustomSelect([
+      { value: 'all', label: t('gateway.sessionsAll') },
+      { value: 'own', label: t('gateway.sessionsOwn') },
+      { value: 'none', label: t('gateway.sessionsNone') }
+    ], {
+      value: visibility,
+      onchange: (val) => markDirty()
+    })
+    sessionsContainer.appendChild(sessionsSelect.container)
   }
 }
 

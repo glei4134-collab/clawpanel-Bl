@@ -4,6 +4,7 @@
  */
 import { api, invalidate } from '../lib/tauri-api.js'
 import { showUpgradeModal } from '../components/modal.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { toast } from '../components/toast.js'
 import { setUpgrading, isMacPlatform } from '../lib/app-state.js'
 import { diagnoseInstallError } from '../lib/error-diagnosis.js'
@@ -405,21 +406,12 @@ function renderInstallSection() {
       </div>
       <div style="margin-bottom:var(--space-sm)" id="install-method-section">
         <label style="font-size:var(--font-size-xs);color:var(--text-tertiary);display:block;margin-bottom:4px">${t('setup.installMethodLabel')}</label>
-        <select id="install-method" style="width:100%;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-primary);background:var(--bg-secondary);color:var(--text-primary);font-size:var(--font-size-sm)">
-          <option value="auto">${t('setup.methodAuto')}</option>
-          <option value="standalone-r2">${t('setup.methodStandaloneR2')}</option>
-          <option value="standalone-github">${t('setup.methodStandaloneGithub')}</option>
-          <option value="npm">${t('setup.methodNpm')}</option>
-        </select>
+        <div id="install-method-select" style="width:100%"></div>
         <div id="method-hint" style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px;line-height:1.5"></div>
       </div>
       <div style="margin-bottom:var(--space-sm)" id="registry-section">
         <label style="font-size:var(--font-size-xs);color:var(--text-tertiary);display:block;margin-bottom:4px">${t('setup.registryLabel')}</label>
-        <select id="registry-select" style="width:100%;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-primary);background:var(--bg-secondary);color:var(--text-primary);font-size:var(--font-size-sm)">
-          <option value="https://registry.npmmirror.com">${t('setup.registryTaobao')}</option>
-          <option value="https://registry.npmjs.org">${t('setup.registryNpm')}</option>
-          <option value="https://repo.huaweicloud.com/repository/npm/">${t('setup.registryHuawei')}</option>
-        </select>
+        <div id="registry-select-container" style="width:100%"></div>
       </div>
       <button class="btn btn-primary btn-sm" id="btn-install">${t('setup.installBtn')}</button>
     </div>

@@ -1,4 +1,4 @@
-﻿mod commands;
+mod commands;
 mod models;
 mod tray;
 mod utils;
@@ -28,6 +28,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .register_uri_scheme_protocol("tauri", move |ctx, request| {
             let uri_path = request.uri().path();
             let path = if uri_path == "/" || uri_path.is_empty() {

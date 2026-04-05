@@ -5,6 +5,7 @@
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showConfirm } from '../components/modal.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { t, getLang, setLang, getAvailableLangs, onLangChange } from '../lib/i18n.js'
 import { isMacPlatform } from '../lib/app-state.js'
 import { renderSidebar } from '../components/sidebar.js'
@@ -769,26 +770,30 @@ function loadLanguageSwitcher(page) {
   if (!bar) return
   const langs = getAvailableLangs()
   const current = getLang()
+  
   bar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap">
-      <select class="form-input" id="lang-select" style="max-width:200px">
-        ${langs.map(l => `<option value="${l.code}" ${l.code === current ? 'selected' : ''}>${l.label}</option>`).join('')}
-      </select>
-    </div>
+    <div style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap" id="lang-select-container"></div>
     <div class="form-hint" style="margin-top:var(--space-xs)">${t('settings.languageHint')}</div>
   `
-  const select = bar.querySelector('#lang-select')
-  select.onchange = () => {
-    setLang(select.value)
-    // Re-render sidebar + current page
-    const sidebarEl = document.getElementById('sidebar')
-    if (sidebarEl) renderSidebar(sidebarEl)
-    // Re-render settings page
-    const pageEl = page.closest('.page') || page
-    render().then(newPage => {
-      pageEl.replaceWith(newPage)
-    }).catch(() => {})
-  }
+  
+  const container = bar.querySelector('#lang-select-container')
+  const options = langs.map(l => ({ value: l.code, label: l.label }))
+  
+  const select = createCustomSelect(options, {
+    value: current,
+    placeholder: t('settings.selectLanguage') || '选择语言',
+    onchange: (val) => {
+      setLang(val)
+      const sidebarEl = document.getElementById('sidebar')
+      if (sidebarEl) renderSidebar(sidebarEl)
+      const pageEl = page.closest('.page') || page
+      render().then(newPage => {
+        pageEl.replaceWith(newPage)
+      }).catch(() => {})
+    }
+  })
+  
+  container.appendChild(select.container)
 }
 
 // ===== 开机自启 =====

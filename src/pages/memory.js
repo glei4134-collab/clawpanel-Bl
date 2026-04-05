@@ -4,6 +4,7 @@
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showModal } from '../components/modal.js'
+import { showModalSelect } from '../components/modal-select.js'
 import { t } from '../lib/i18n.js'
 
 function CATEGORIES() {
@@ -23,7 +24,10 @@ export async function render() {
       <h1 class="page-title">${t('memory.title')}</h1>
       <div class="page-actions" style="display:flex;align-items:center;gap:var(--space-sm)">
         <label style="font-size:var(--font-size-sm);color:var(--text-tertiary)">${t('memory.agentLabel')}</label>
-        <select class="form-input" id="agent-select" style="width:auto;min-width:140px"><option value="main">main</option></select>
+        <button class="btn btn-secondary btn-sm" id="agent-select-btn" style="min-width:140px">
+          <span id="agent-select-text">main</span>
+          <span style="opacity:0.5">▼</span>
+        </button>
       </div>
     </div>
     <div class="tab-bar">
@@ -55,31 +59,42 @@ export async function render() {
     </div>
   `
 
-  const state = { category: 'memory', currentPath: null, agentId: 'main' }
+  const state = { category: 'memory', currentPath: null, agentId: 'main', agents: [] }
 
-  // 先用默认选项填充下拉框，立即显示页面
-  const agentSelect = page.querySelector('#agent-select')
-  agentSelect.innerHTML = '<option value="main">main</option>'
+  // Agent 切换按钮
+  page.querySelector('#agent-select-btn').onclick = async () => {
+    // 异步加载 agent 列表
+    let agents = state.agents
+    if (agents.length === 0) {
+      try {
+        agents = await api.listAgents()
+        state.agents = agents
+      } catch {
+        toast(t('memory.loadFailed'), 'error')
+        return
+      }
+    }
 
-  // 异步加载 agent 列表并更新下拉框
-  api.listAgents().then(agents => {
-    if (!agentSelect) return
     const options = agents.map(a => {
       const label = a.identityName ? a.identityName.split(',')[0].trim() : a.id
-      return `<option value="${a.id}">${a.id}${a.id !== label ? ' — ' + label : ''}</option>`
-    }).join('')
-    agentSelect.innerHTML = options
-  }).catch(() => {})
+      return { value: a.id, label: `${a.id}${a.id !== label ? ' — ' + label : ''}` }
+    })
 
-  // Agent 切换
-  page.querySelector('#agent-select').onchange = (e) => {
-    state.agentId = e.target.value
-    state.currentPath = null
-    resetEditor(page)
-    // 显示加载动画
-    const tree = page.querySelector('#file-tree')
-    tree.innerHTML = '<div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div><div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div><div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div>'
-    loadFiles(page, state)
+    showModalSelect({
+      title: t('memory.agentLabel'),
+      options,
+      value: state.agentId,
+      onchange: (selected) => {
+        if (state.agentId === selected) return
+        state.agentId = selected
+        state.currentPath = null
+        page.querySelector('#agent-select-text').textContent = selected
+        resetEditor(page)
+        const tree = page.querySelector('#file-tree')
+        tree.innerHTML = '<div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div><div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div><div class="stat-card loading-placeholder" style="height:32px;margin:8px"></div>'
+        loadFiles(page, state)
+      }
+    })
   }
 
   // Tab 切换

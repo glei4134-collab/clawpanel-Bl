@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>通知系统测试 - ClawPanel</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    .btn:hover { background: #4f46e5; }
+    .btn-success { background: #10b981; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-warning { background: #f59e0b; }
+    .btn-warning:hover { background: #d97706; }
+    .info {
+      background: #eff6ff;
+      border-left: 4px solid #6366f1;
+      padding: 12px;
+      margin: 10px 0;
+    }
+    code {
+      background: #f1f1f1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔔 ClawPanel 通知系统测试</h1>
+
+  <div class="section">
+    <h2>基本用法</h2>
+    <p>引入并初始化通知管理器：</p>
+    <pre><code>import { initNotificationManager, notify, notifyNewMessage, notifyError } from './lib/notification-manager.js'
+
+// 在应用启动时初始化
+initNotificationManager()</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>发送通知</h2>
+
+    <h3>1. 通用通知</h3>
+    <button class="btn" onclick="testBasic()">基础通知</button>
+    <button class="btn" onclick="testWithSound()">带音效通知</button>
+    <button class="btn" onclick="testSystemOnly()">仅系统通知</button>
+
+    <h3>2. 快捷方法</h3>
+    <button class="btn-success" onclick="testNewMessage()">新消息通知</button>
+    <button class="btn-danger" onclick="testError()">错误通知</button>
+    <button class="btn-warning" onclick="testWarning()">警告通知</button>
+  </div>
+
+  <div class="section">
+    <h2>页面失焦测试</h2>
+    <div class="info">
+      点击下方按钮后，<strong>立即最小化窗口或切换到其他标签页</strong>，<br>
+      你应该能看到系统通知弹出。
+    </div>
+    <button class="btn" onclick="testPageHidden()">测试页面失焦通知</button>
+  </div>
+
+  <div class="section">
+    <h2>音效测试</h2>
+    <p>点击按钮测试不同音效预设：</p>
+    <button class="btn" onclick="testSound('chime')">Chime（清脆）</button>
+    <button class="btn" onclick="testSound('bubble')">Bubble（泡泡）</button>
+    <button class="btn" onclick="testSound('bell')">Bell（叮咚）</button>
+    <button class="btn" onclick="testSound('click')">Click（点击）</button>
+  </div>
+
+  <div class="section">
+    <h2>免打扰模式</h2>
+    <p>开启免打扰后，通知将不会弹出（除非使用 force 选项）：</p>
+    <button class="btn" onclick="toggleDND()">切换免打扰模式</button>
+    <span id="dnd-status">当前状态：关闭</span>
+  </div>
+
+  <div class="section">
+    <h2>配置说明</h2>
+    <div class="info">
+      <strong>通知设置（保存在 localStorage）：</strong><br>
+      - soundEnabled: 是否启用音效<br>
+      - soundVolume: 音量（0-1）<br>
+      - soundPreset: 音效预设（chime/bubble/bell/click）<br>
+      - systemNotificationEnabled: 是否启用系统通知<br>
+      - toastEnabled: 是否启用应用内 Toast<br>
+      - doNotDisturb: 免打扰模式<br>
+      - doNotDisturbStart/End: 免打扰时间段<br>
+      - showOnPageHidden: 页面失焦时显示通知<br>
+      - excludeOwnMessages: 排除自己发送的消息<br>
+      - excludeBotMessages: 排除 Bot 消息
+    </div>
+  </div>
+
+  <script type="module">
+    import { initNotificationManager, notify, notifyNewMessage, notifyError, notifyWarning, playSound, getNotificationSettings, updateNotificationSettings } from './src/lib/notification-manager.js'
+
+    window.notify = notify
+    window.notifyNewMessage = notifyNewMessage
+    window.notifyError = notifyError
+    window.notifyWarning = notifyWarning
+    window.playSound = playSound
+    window.getNotificationSettings = getNotificationSettings
+    window.updateNotificationSettings = updateNotificationSettings
+
+    initNotificationManager()
+
+    window.testBasic = () => {
+      notify({
+        title: '测试通知',
+        body: '这是一条基础通知'
+      })
+    }
+
+    window.testWithSound = () => {
+      notify({
+        title: '带音效',
+        body: '这条通知会播放音效'
+      })
+    }
+
+    window.testSystemOnly = () => {
+      notify({
+        title: '系统通知',
+        body: '这条只显示系统通知',
+        systemOnly: true
+      })
+    }
+
+    window.testNewMessage = () => {
+      notifyNewMessage('你好，有什么可以帮助你的吗？')
+    }
+
+    window.testError = () => {
+      notifyError('连接失败，请检查网络设置')
+    }
+
+    window.testWarning = () => {
+      notifyWarning('磁盘空间不足')
+    }
+
+    window.testPageHidden = () => {
+      notify({
+        title: '失焦测试',
+        body: '如果你看到这个，说明页面失焦通知工作正常！',
+        tag: 'test-hidden'
+      })
+    }
+
+    window.testSound = (preset) => {
+      playSound(preset)
+    }
+
+    window.toggleDND = () => {
+      const settings = getNotificationSettings()
+      updateNotificationSettings({ doNotDisturb: !settings.doNotDisturb })
+      const newSettings = getNotificationSettings()
+      document.getElementById('dnd-status').textContent = `当前状态：${newSettings.doNotDisturb ? '开启' : '关闭'}`
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI 自定义模块
  * 支持背景图片、透明度、点击音效等自定义设置
  */
@@ -8,6 +8,7 @@ import { writeFile, readFile, mkdir, exists, BaseDirectory } from '@tauri-apps/p
 const UI_CONFIG_KEY = 'gl_ui_config'
 const BG_IMAGE_FILENAME = 'background.png'
 const BG_IMAGE_DIR = 'clawpanel'
+let _tempClickVolume = null
 
 const DEFAULT_CONFIG = {
   bgImage: '',
@@ -40,6 +41,8 @@ const DEFAULT_CONFIG = {
   bubbleStyle: 'modern',
   bubbleAnimation: true,
   cardAlpha: 0.85,
+  panelAlpha: 0.95,
+  panelBlur: 0,
 }
 
 let _audioContext = null
@@ -99,6 +102,9 @@ export async function saveBgImageToStorage(imageData) {
     await writeFile(filePath, bytes, { baseDir: BaseDirectory.AppData });
     const config = getUIConfig();
     config.bgImage = filePath;
+    try {
+      localStorage.setItem('gl_bg_image', imageData)
+    } catch {}
     saveUIConfig(config);
     console.log('[UI] Saved bg image to:', filePath);
     return true;
@@ -132,19 +138,24 @@ export async function initBgImage() {
   }
 }
 
-// 计算有效透明度：全局 + 细调（细调范围-1到1）
-function calcAlpha(baseAlpha, fineVal) {
-  fineVal = fineVal ?? 0
-  let alpha = baseAlpha + fineVal
-  alpha = Math.max(0, Math.min(1, alpha))
-  return alpha
+// ========== 通用计算函数 ==========
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val))
 }
 
-function calcBlur(baseBlur, fineVal) {
+function calcFine(baseVal, fineVal, minVal = 0, maxVal = 1) {
   fineVal = fineVal ?? 0
-  let blur = baseBlur + fineVal
-  blur = Math.max(0, blur)
-  return blur
+  return clamp(baseVal + fineVal, minVal, maxVal)
+}
+
+// 计算有效透明度（细调范围-1到1）
+function calcAlpha(baseAlpha, fineVal) {
+  return calcFine(baseAlpha, fineVal, 0, 1)
+}
+
+// 计算有效模糊度（最小值为0）
+function calcBlur(baseBlur, fineVal) {
+  return Math.max(0, baseBlur + (fineVal ?? 0))
 }
 
 export function applyUIConfig(config) {
@@ -155,15 +166,15 @@ export function applyUIConfig(config) {
     applyBgImage(config.bgImage)
   }
   
-  // 应用模糊度和亮度
+  // 应用模糊度、亮度和全局透明度
   const bgDiv = document.getElementById('ui-bg-layer')
+  const globalAlpha = config.globalAlpha ?? 0
   if (bgDiv) {
     bgDiv.style.filter = `blur(${config.bgBlur || 0}px) brightness(${config.bgBrightness || 0.66})`
-    bgDiv.style.opacity = config.bgOpacity || 0.2
+    bgDiv.style.opacity = Math.min(1, (config.bgOpacity ?? 0.2) + globalAlpha)
   }
   
   // 应用全局透明度到所有区域 - 使用CSS变量
-  const globalAlpha = config.globalAlpha ?? 0
   document.documentElement.style.setProperty('--alpha-global', globalAlpha)
   
   // 各区域透明度单独计算后设置CSS变量
@@ -211,6 +222,9 @@ export function applyUIConfig(config) {
   // 应用卡片透明度
   const cardAlpha = config.cardAlpha ?? 0.85
   document.documentElement.style.setProperty('--ui-card-alpha', cardAlpha)
+
+  // 应用面板自身效果
+  applyPanelStyle()
 }
 
 const SOUND_PRESETS = {
@@ -453,7 +467,7 @@ export function initAudioContext() {
 
 export function playClickSound() {
   const config = getUIConfig()
-  if (!config.clickSound || config.soundPreset === 'none' || config.clickSoundVolume === 0) return
+  if (!config.clickSound || config.soundPreset === 'none') return
   try {
     if (!_audioContext || !_clickBuffer) {
       initAudioContext()
@@ -464,7 +478,9 @@ export function playClickSound() {
     const source = _audioContext.createBufferSource()
     const gainNode = _audioContext.createGain()
     source.buffer = _clickBuffer
-    gainNode.gain.value = config.clickSoundVolume || 0.6
+    const volume = _tempClickVolume ?? config.clickSoundVolume ?? 0.6
+    if (volume === 0) return
+    gainNode.gain.value = volume
     source.connect(gainNode)
     gainNode.connect(_audioContext.destination)
     source.start(0)
@@ -583,6 +599,11 @@ export async function applyBgImage(imageData) {
   _sessionBgImage = imageData
   const config = getUIConfig()
   config.bgImage = imageData
+  try {
+    localStorage.setItem('gl_bg_image', imageData)
+  } catch (e) {
+    console.warn('[UI] Failed to save bg image:', e)
+  }
   
   let imageUrl = getImageUrl(imageData)
   
@@ -653,24 +674,38 @@ function getBgDiv() {
   return document.getElementById('ui-bg-layer')
 }
 
+function applyBgStyle() {
+  const config = getUIConfig()
+  const bgDiv = getBgDiv()
+  if (bgDiv) {
+    const blur = config.bgBlur || 0
+    const brightness = config.bgBrightness || 0.66
+    bgDiv.style.filter = `blur(${blur}px) brightness(${brightness})`
+  }
+}
+
 export function applyBgBlur(val) {
   const config = getUIConfig()
   config.bgBlur = parseFloat(val)
+  applyBgStyle()
+}
+
+export function saveBgBlur(val) {
+  const config = getUIConfig()
+  config.bgBlur = parseFloat(val)
   saveUIConfig(config)
-  const bgDiv = getBgDiv()
-  if (bgDiv) {
-    bgDiv.style.filter = `blur(${val}px) brightness(${config.bgBrightness || 0.7})`
-  }
 }
 
 export function applyBgBrightness(val) {
   const config = getUIConfig()
   config.bgBrightness = parseFloat(val) / 100
+  applyBgStyle()
+}
+
+export function saveBgBrightness(val) {
+  const config = getUIConfig()
+  config.bgBrightness = parseFloat(val) / 100
   saveUIConfig(config)
-  const bgDiv = getBgDiv()
-  if (bgDiv) {
-    bgDiv.style.filter = `blur(${config.bgBlur || 0}px) brightness(${config.bgBrightness})`
-  }
 }
 
 export function applyBgOpacity(val) {
@@ -736,109 +771,211 @@ export function applySoundPreset(presetId) {
 }
 
 export function applySoundVolume(val) {
-  const config = getUIConfig()
-  config.clickSoundVolume = parseFloat(val) / 100
-  saveUIConfig(config)
+  _tempClickVolume = parseFloat(val) / 100
 }
 
 
 // 全局透明度
+// ========== 全局设置 ==========
 export function applyGlobalAlpha(val) {
+  document.documentElement.style.setProperty('--ui-global-alpha', val / 100)
+}
+
+export function saveGlobalAlpha(val) {
   const config = getUIConfig()
   config.globalAlpha = val / 100
   saveUIConfig(config)
-  applyUIConfig(config)
 }
 
-// 各区域细调
+// ========== 透明度细调函数（预览 - 不保存） ==========
 export function applySidebarFine(val) {
-  const config = getUIConfig()
-  config.sidebarFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  document.documentElement.style.setProperty('--alpha-sidebar', calcAlpha(0.5, val / 100))
 }
 
 export function applyNavSidebarFine(val) {
-  const config = getUIConfig()
-  config.navSidebarFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  document.documentElement.style.setProperty('--alpha-nav-sidebar', calcAlpha(0.25, val / 100))
 }
 
 export function applyMainFine(val) {
-  const config = getUIConfig()
-  config.mainFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  document.documentElement.style.setProperty('--alpha-main', calcAlpha(0, val / 100))
 }
 
 export function applyMessagesFine(val) {
-  const config = getUIConfig()
-  config.messagesFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  document.documentElement.style.setProperty('--alpha-messages', calcAlpha(0, val / 100))
 }
 
 export function applySessionFine(val) {
-  const config = getUIConfig()
-  config.sessionFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  document.documentElement.style.setProperty('--alpha-session', calcAlpha(0, val / 100))
 }
 
 export function applyInputFine(val) {
+  document.documentElement.style.setProperty('--alpha-input', calcAlpha(0, val / 100))
+}
+
+// 保存透明度细调
+export function saveSidebarFine(val) {
+  const config = getUIConfig()
+  config.sidebarFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveNavSidebarFine(val) {
+  const config = getUIConfig()
+  config.navSidebarFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveMainFine(val) {
+  const config = getUIConfig()
+  config.mainFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveMessagesFine(val) {
+  const config = getUIConfig()
+  config.messagesFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveSessionFine(val) {
+  const config = getUIConfig()
+  config.sessionFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveInputFine(val) {
   const config = getUIConfig()
   config.inputFine = val / 100
   saveUIConfig(config)
-  applyUIConfig(config)
 }
 
-// 模糊度细调
+// ========== 模糊度细调函数（预览 - 不保存） ==========
 export function applyNavSidebarBlurFine(val) {
-  const config = getUIConfig()
-  config.navSidebarBlurFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-nav-sidebar', calcBlur(baseBlur, val / 100))
+  document.documentElement.style.setProperty('--blur-sidebar', calcBlur(baseBlur, val / 100))
 }
 
 export function applySidebarBlurFine(val) {
-  const config = getUIConfig()
-  config.sidebarBlurFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-sidebar', calcBlur(baseBlur, val / 100))
 }
 
 export function applyMainBlurFine(val) {
-  const config = getUIConfig()
-  config.mainBlurFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-main', calcBlur(baseBlur, val / 100))
 }
 
 export function applyMessagesBlurFine(val) {
-  const config = getUIConfig()
-  config.messagesBlurFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-messages', calcBlur(baseBlur, val / 100))
 }
 
 export function applySessionBlurFine(val) {
-  const config = getUIConfig()
-  config.sessionBlurFine = val / 100
-  saveUIConfig(config)
-  applyUIConfig(config)
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-session', calcBlur(baseBlur, val / 100))
 }
 
 export function applyInputBlurFine(val) {
+  const baseBlur = (getUIConfig().bgBlur || 0)
+  document.documentElement.style.setProperty('--blur-input', calcBlur(baseBlur, val / 100))
+}
+
+// 保存模糊度细调
+export function saveNavSidebarBlurFine(val) {
+  const config = getUIConfig()
+  config.navSidebarBlurFine = val / 100
+  config.sidebarBlurFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveSidebarBlurFine(val) {
+  const config = getUIConfig()
+  config.sidebarBlurFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveMainBlurFine(val) {
+  const config = getUIConfig()
+  config.mainBlurFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveMessagesBlurFine(val) {
+  const config = getUIConfig()
+  config.messagesBlurFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveSessionBlurFine(val) {
+  const config = getUIConfig()
+  config.sessionBlurFine = val / 100
+  saveUIConfig(config)
+}
+
+export function saveInputBlurFine(val) {
   const config = getUIConfig()
   config.inputBlurFine = val / 100
   saveUIConfig(config)
-  applyUIConfig(config)
 }
 
 export function applyCardAlpha(val) {
+  document.documentElement.style.setProperty('--ui-card-alpha', val / 100)
+}
+
+export function saveCardAlpha(val) {
   const config = getUIConfig()
   config.cardAlpha = val / 100
   saveUIConfig(config)
-  document.documentElement.style.setProperty('--ui-card-alpha', config.cardAlpha)
+}
+
+// 设置浮动面板自身效果（实时预览，不保存）
+export function applyPanelAlpha(val) {
+  document.documentElement.style.setProperty('--ui-panel-alpha', val / 100)
+}
+
+export function applyPanelBlur(val) {
+  document.documentElement.style.setProperty('--ui-panel-blur', val + 'px')
+}
+
+// 保存面板透明度（保存到配置）
+export function savePanelAlpha(val) {
+  const config = getUIConfig()
+  config.panelAlpha = val / 100
+  saveUIConfig(config)
+}
+
+// 保存面板模糊度（保存到配置）
+export function savePanelBlur(val) {
+  const config = getUIConfig()
+  config.panelBlur = parseFloat(val)
+  saveUIConfig(config)
+}
+
+export function applyPanelStyle() {
+  const config = getUIConfig()
+  const panelAlpha = config.panelAlpha ?? 0.85
+  const panelBlur = config.panelBlur ?? 0
+  document.documentElement.style.setProperty('--ui-panel-alpha', panelAlpha)
+  document.documentElement.style.setProperty('--ui-panel-blur', panelBlur + 'px')
+}
+
+// ========== 音量设置 ==========
+export function saveSoundVolume(val) {
+  const config = getUIConfig()
+  config.clickSoundVolume = val / 100
+  saveUIConfig(config)
+}
+
+// ========== 光标尾巴设置 ==========
+export function saveCursorTrailSize(val) {
+  const config = getUIConfig()
+  config.cursorTrailSize = parseInt(val)
+  saveUIConfig(config)
+}
+
+export function saveCursorTrailDensity(val) {
+  const config = getUIConfig()
+  config.cursorTrailDensity = parseInt(val)
+  saveUIConfig(config)
 }

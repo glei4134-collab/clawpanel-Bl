@@ -4,6 +4,7 @@
  */
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { t } from '../lib/i18n.js'
 
 let _loadSeq = 0
@@ -30,10 +31,7 @@ export async function render() {
     </div>
     <div id="skills-tab-store" class="config-section" style="display:none">
       <div class="clawhub-toolbar" style="margin-bottom:var(--space-sm)">
-        <select class="form-input" id="install-source-select" style="width:auto;min-width:160px">
-          <option value="skillhub">${t('skills.sourceSkillHub')}</option>
-          <option value="clawhub">${t('skills.sourceClawHub')}</option>
-        </select>
+        <div id="install-source-select-container" style="min-width:160px"></div>
         <input class="input clawhub-search-input" id="skill-install-search" placeholder="${t('skills.searchPlaceholder')}" type="text" style="flex:1">
         <button class="btn btn-primary btn-sm" data-action="install-source-search">${t('skills.search')}</button>
         <button class="btn btn-secondary btn-sm" data-action="skillhub-setup" id="btn-skillhub-setup" style="display:none">${t('skills.installCLI')}</button>
@@ -440,9 +438,16 @@ function bindEvents(page) {
   })
 
   // 安装源下拉切换
-  const sourceSelect = page.querySelector('#install-source-select')
-  if (sourceSelect) {
-    sourceSelect.onchange = () => switchInstallSource(page, sourceSelect.value)
+  const sourceContainer = page.querySelector('#install-source-select-container')
+  if (sourceContainer) {
+    const sourceSelect = createCustomSelect([
+      { value: 'skillhub', label: t('skills.sourceSkillHub') },
+      { value: 'clawhub', label: t('skills.sourceClawHub') }
+    ], {
+      value: _installSource || 'skillhub',
+      onchange: (val) => switchInstallSource(page, val)
+    })
+    sourceContainer.appendChild(sourceSelect.container)
   }
 
   page.addEventListener('click', async (e) => {

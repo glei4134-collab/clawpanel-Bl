@@ -3,6 +3,9 @@
  */
 let _container = null
 
+const NOTIFICATION_HISTORY_KEY = 'clawpanel-notification-history'
+const MAX_HISTORY_SIZE = 50
+
 function ensureContainer() {
   if (!_container) {
     _container = document.createElement('div')
@@ -12,13 +15,87 @@ function ensureContainer() {
   return _container
 }
 
+function getNotificationHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(NOTIFICATION_HISTORY_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveNotificationToHistory(notification) {
+  const history = getNotificationHistory()
+  history.unshift(notification)
+  if (history.length > MAX_HISTORY_SIZE) {
+    history.pop()
+  }
+  localStorage.setItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(history))
+}
+
+export function clearNotificationHistory() {
+  localStorage.removeItem(NOTIFICATION_HISTORY_KEY)
+}
+
+export function getNotificationHistoryData() {
+  return getNotificationHistory()
+}
+
+export async function showSystemNotification(title, body, options = {}) {
+  if (!('Notification' in window)) {
+    return false
+  }
+  
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body,
+      icon: options.icon || '/images/logo.png',
+      tag: options.tag || 'default',
+      silent: options.silent || false
+    })
+    
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+      options.onClick?.()
+    }
+    
+    setTimeout(() => notification.close(), options.timeout || 5000)
+    return true
+  }
+  
+  if (Notification.permission !== 'denied') {
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted') {
+      return showSystemNotification(title, body, options)
+    }
+  }
+  
+  return false
+}
+
 export function toast(message, type = 'info', options = {}) {
   const duration = options.duration || 3000
-  const action = options.action // 可选的操作按钮（DOM 元素）
+  const action = options.action
+  const timestamp = Date.now()
+  
+  const notification = {
+    id: `notif-${timestamp}`,
+    message: typeof message === 'string' ? message : '',
+    type,
+    timestamp,
+    read: false
+  }
+  
+  if (options.tag) {
+    notification.tag = options.tag
+  }
+  
+  saveNotificationToHistory(notification)
 
   const container = ensureContainer()
   const el = document.createElement('div')
   el.className = `toast ${type}`
+  el.dataset.notifId = notification.id
 
   const textSpan = document.createElement('span')
   if (options.html) {
@@ -28,7 +105,6 @@ export function toast(message, type = 'info', options = {}) {
   }
   el.appendChild(textSpan)
 
-  // 如果有操作按钮，添加到 toast 中
   if (action instanceof HTMLElement) {
     el.appendChild(action)
   }

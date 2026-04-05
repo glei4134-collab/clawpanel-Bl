@@ -1602,6 +1602,21 @@
 
 .ui-settings-page .page-header {
   margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: rgba(128, 128, 128, var(--ui-card-alpha, 0.85));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+}
+
+.ui-settings-page .page-title {
+  font-size: 1.75rem;
+  margin-bottom: var(--space-sm);
+}
+
+.ui-settings-page .page-desc {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin: 0;
 }
 
 .ui-settings-grid {
@@ -1609,6 +1624,22 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--space-lg);
   margin-bottom: var(--space-xl);
+}
+
+.ui-settings-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1200px) {
+  .ui-settings-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ui-settings-grid-3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ui-settings-card {
@@ -1622,6 +1653,23 @@
 .ui-settings-card:hover {
   border-color: var(--border-focus);
   box-shadow: var(--shadow-md);
+}
+
+.ui-settings-tips {
+  padding: var(--space-md);
+  background: rgba(100, 181, 246, 0.1);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.ui-settings-tips p {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.ui-settings-tips p:last-child {
+  margin-bottom: 0;
 }
 
 .ui-settings-card-header {

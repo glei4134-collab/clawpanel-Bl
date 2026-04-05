@@ -1526,6 +1526,33 @@
   opacity: 0.4;
 }
 
+.msg .msg-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.msg-user .msg-time {
+  text-align: right;
+}
+
+.msg-user.sending .msg-text {
+  opacity: 0.7;
+}
+
+.msg-user.sending .msg-time {
+  color: var(--accent, #6366f1);
+}
+
+.msg-user.send-failed .msg-text {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.msg-user.send-failed .msg-time {
+  color: #ef4444;
+}
+
 /* 消息内图片 */
 .msg-img {
   max-width: 200px;
@@ -2056,11 +2083,14 @@
   width: 300px;
   max-height: 70vh;
   background: var(--bg-secondary);
+  background-blend-mode: normal;
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   z-index: 1000;
   overflow-y: auto;
+  backdrop-filter: blur(var(--ui-panel-blur, 0px));
+  background-color: rgba(var(--ui-panel-bg-r, 255), var(--ui-panel-bg-g, 255), var(--ui-panel-bg-b, 255), var(--ui-panel-alpha, 0.85));
 }
 
 .ui-settings-float-header {
@@ -2130,6 +2160,22 @@
   font-size: 12px;
   cursor: pointer;
   max-width: 130px;
+}
+
+.custom-select-container {
+  width: 100%;
+  max-width: 200px;
+}
+
+.ui-settings-float-panel .custom-select {
+  width: 100%;
+}
+
+.ui-settings-float-panel .custom-select-trigger {
+  width: 100%;
+  max-width: 200px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .ui-settings-presets {
@@ -2203,6 +2249,34 @@
 .chat-header-actions .btn-split-active {
   background: var(--accent);
   color: var(--bg);
+}
+
+/* 分屏比例指示器 */
+.split-ratio-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: var(--font-mono), monospace;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.split-ratio-indicator.visible {
+  opacity: 1;
+}
+
+.split-ratio-indicator span {
+  color: var(--accent, #6366f1);
 }
 
 /* =========================================

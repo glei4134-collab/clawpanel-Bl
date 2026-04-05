@@ -5,6 +5,7 @@
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showModal, showConfirm } from '../components/modal.js'
+import { createCustomSelect } from '../components/custom-select.js'
 import { icon, statusIcon } from '../lib/icons.js'
 import { API_TYPES, PROVIDER_PRESETS, MODEL_PRESETS } from '../lib/model-presets.js'
 import { t } from '../lib/i18n.js'
