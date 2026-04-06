@@ -1,0 +1,18 @@
+{
+  "title": "Erweiterungstools",
+  "desc": "cftunnel und ClawApp verwalten",
+  "cftunnelTitle": "cftunnel",
+  "clawappTitle": "ClawApp",
+  "installBtn": "Schnellinstallation",
+  "status": "Status",
+  "running": "Läuft",
+  "stopped": "Gestoppt",
+  "version": "Version",
+  "startTunnel": "Tunnel starten",
+  "stopTunnel": "Tunnel stoppen",
+  "start": "Starten",
+  "stop": "Stoppen",
+  "installing": "Wird installiert...",
+  "installDone": "Installation abgeschlossen",
+  "installFailed": "Installation fehlgeschlagen"
+}

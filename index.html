@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gl</title>
+  <link rel="icon" href="/images/logo.png" type="image/png" />
+  <link rel="shortcut icon" href="/images/logo.png" type="image/png" />
+  <style>
+    #splash {
+      position: fixed; inset: 0; z-index: 99999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: transparent;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    @media (prefers-color-scheme: dark) { #splash { background: transparent; } }
+    #splash.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+    #splash .sp-logo {
+      width: 56px; height: 56px; margin-bottom: 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 28px; font-weight: bold;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+    }
+    #splash .sp-name {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 18px; font-weight: 600; letter-spacing: 0.5px;
+      color: #18181b; margin-bottom: 28px;
+    }
+    @media (prefers-color-scheme: dark) { #splash .sp-name { color: #e4e4e7; } }
+    #splash .sp-bar {
+      width: 120px; height: 3px; border-radius: 2px; overflow: hidden;
+      background: rgba(99, 102, 241, 0.15);
+    }
+    #splash .sp-bar-inner {
+      width: 40%; height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      animation: sp-slide 1.2s ease-in-out infinite;
+    }
+    @keyframes sp-slide {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(200%); }
+      100% { transform: translateX(-100%); }
+    }
+    #ui-bg-layer {
+      position: fixed; inset: 0; z-index: -1;
+      background: url('./images/bg.png') center / cover no-repeat fixed;
+      background-color: #0f172a;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="sp-logo">G</div>
+    <div class="sp-name">Gl</div>
+    <div class="sp-bar"><div class="sp-bar-inner"></div></div>
+  </div>
+  <script>window._splashTimer=setTimeout(function(){var s=document.getElementById('splash');if(s){var app=document.getElementById('content');if(app&&app.children.length>0){s.classList.add('hide');setTimeout(function(){s.remove()},500)}else{s.innerHTML='<div style="text-align:center;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="font-size:16px;font-weight:600;color:#18181b;margin-bottom:8px">页面加载失败</div><div style="font-size:12px;color:#71717a;margin-bottom:16px;line-height:1.7">应用启动阶段没有完成前端加载。这通常意味着 WebView2 未安装/已损坏，或前端资源被拦截。<br>请先检查控制台是否有报错；如确认 WebView2 未安装，请下载 <a href="https://go.microsoft.com/fwlink/p/?LinkId=2124703" style="color:#6366f1">WebView2 Runtime</a></div><button onclick="location.reload()" style="padding:6px 16px;border-radius:6px;border:none;background:#6366f1;color:#fff;font-size:12px;cursor:pointer">刷新重试</button></div>'}}},30000)</script>
+
+  <div id="ui-bg-layer"></div>
+  <div id="app">
+    <aside id="sidebar"></aside>
+    <div id="main-col">
+      <div id="update-banner" class="update-banner update-banner-hidden"></div>
+      <div id="gw-banner" class="gw-banner gw-banner-hidden"></div>
+      <main id="content"></main>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

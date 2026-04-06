@@ -1,0 +1,93 @@
+name: Bug 报告
+description: 提交一个 Bug 报告，帮助我们改进 ClawPanel
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你提交 Bug 报告！请尽量详细地填写以下信息，以便我们快速定位和修复问题。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述你遇到的问题。
+      placeholder: 请描述你遇到了什么问题...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 按顺序列出复现该问题的操作步骤。
+      placeholder: |
+        1. 打开应用
+        2. 进入 '...' 页面
+        3. 点击 '...' 按钮
+        4. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 描述你期望应该发生什么。
+      placeholder: 我期望...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      description: 你使用的操作系统是什么？
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows 11
+        - Windows 10
+        - Ubuntu / Debian
+        - Fedora / RHEL
+        - Arch Linux
+        - 其他 Linux 发行版
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: 系统版本
+      description: 操作系统的具体版本号。
+      placeholder: "例如: macOS 15.3, Windows 11 24H2, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: ClawPanel 版本
+      description: 你使用的 ClawPanel 版本号（可在「关于」页面查看）。
+      placeholder: "例如: v0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或日志
+      description: 如果有的话，请附上截图或相关错误日志，有助于更快地定位问题。
+      placeholder: 拖拽图片到此处上传，或粘贴错误日志...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 其他你认为可能有帮助的信息。
+      placeholder: 任何额外的上下文信息...
+    validations:
+      required: false

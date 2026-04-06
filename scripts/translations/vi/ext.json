@@ -1,0 +1,18 @@
+{
+  "title": "Công cụ mở rộng",
+  "desc": "Quản lý cftunnel và ClawApp",
+  "cftunnelTitle": "cftunnel",
+  "clawappTitle": "ClawApp",
+  "installBtn": "Cài đặt nhanh",
+  "status": "Trạng thái",
+  "running": "Đang chạy",
+  "stopped": "Đã dừng",
+  "version": "Phiên bản",
+  "startTunnel": "Bắt đầu tunnel",
+  "stopTunnel": "Dừng tunnel",
+  "start": "Khởi động",
+  "stop": "Dừng",
+  "installing": "Đang cài đặt...",
+  "installDone": "Cài đặt hoàn tất",
+  "installFailed": "Cài đặt thất bại"
+}

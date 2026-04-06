@@ -1,0 +1,19 @@
+{
+  "title": "Tác vụ định kỳ",
+  "desc": "Quản lý tác vụ định kỳ OpenClaw",
+  "addTask": "+ Thêm tác vụ",
+  "noTasks": "Không có tác vụ",
+  "taskName": "Tên tác vụ",
+  "schedule": "Lịch trình",
+  "status": "Trạng thái",
+  "active": "Hoạt động",
+  "inactive": "Không hoạt động",
+  "edit": "Sửa",
+  "delete": "Xóa",
+  "enable": "Bật",
+  "disable": "Tắt",
+  "runNow": "Chạy ngay",
+  "created": "Tác vụ đã tạo",
+  "deleted": "Tác vụ đã xóa",
+  "loadFailed": "Tải thất bại"
+}

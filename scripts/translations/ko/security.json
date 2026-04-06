@@ -1,0 +1,20 @@
+{
+  "title": "보안",
+  "desc": "OpenClaw 보안 설정 관리",
+  "toolPermissions": "도구 권한",
+  "toolPermDesc": "Agent가 사용할 수 있는 도구 카테고리 제어",
+  "permAll": "모두 허용",
+  "permSafe": "안전한 것만",
+  "permNone": "모두 거부",
+  "permCustom": "사용자 정의",
+  "fileSystem": "파일 시스템",
+  "network": "네트워크",
+  "process": "프로세스",
+  "shell": "셸",
+  "enableAll": "모두 활성화",
+  "disableAll": "모두 비활성화",
+  "savePermissions": "권한 저장",
+  "permSaved": "도구 권한 저장됨",
+  "permSaveFail": "권한 저장 실패",
+  "loadFailed": "보안 설정 로드 실패"
+}

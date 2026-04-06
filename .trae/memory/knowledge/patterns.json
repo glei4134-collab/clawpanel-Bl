@@ -1,0 +1,41 @@
+{
+  "apiIntegration": {
+    "domesticProviders": [
+      {
+        "name": "硅基流动 (SiliconFlow)",
+        "api": "openai-completions",
+        "baseUrl": "https://api.siliconflow.cn/v1",
+        "models": ["DeepSeek", "Qwen"]
+      },
+      {
+        "name": "阿里云百炼",
+        "api": "openai-completions",
+        "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "models": ["通义千问"]
+      },
+      {
+        "name": "智谱 AI",
+        "api": "openai-completions",
+        "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+        "models": ["GLM-4"]
+      }
+    ],
+    "internationalProviders": [
+      {
+        "name": "OpenAI",
+        "baseUrl": "https://api.openai.com/v1"
+      },
+      {
+        "name": "Anthropic",
+        "baseUrl": "https://api.anthropic.com"
+      }
+    ]
+  },
+  "deploymentPatterns": {
+    "docker": "使用 docker-compose.yml 部署",
+    "tauri": "Tauri v2 桌面应用构建",
+    "mirror": "国内使用 Gitee 镜像加速"
+  },
+  "created": "2026-04-05",
+  "updated": "2026-04-05"
+}

@@ -1,0 +1,17 @@
+{
+  "title": "Logs",
+  "desc": "Ver logs do serviço OpenClaw",
+  "tabGateway": "Gateway",
+  "tabGatewayErr": "Erros Gateway",
+  "tabGuardian": "Guardian",
+  "tabBackup": "Backup",
+  "tabAudit": "Auditoria",
+  "searchPlaceholder": "Pesquisar...",
+  "refresh": "Atualizar",
+  "autoScroll": "Rolagem auto",
+  "loading": "Carregando...",
+  "empty": "Sem logs",
+  "loadFailed": "Falha ao carregar",
+  "noResults": "Sem resultados",
+  "searchFailed": "Pesquisa falhou"
+}

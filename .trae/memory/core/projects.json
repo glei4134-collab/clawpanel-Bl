@@ -1,0 +1,16 @@
+{
+  "clawpanel": {
+    "name": "ClawPanel",
+    "description": "OpenClaw AI Agent 可视化管理面板",
+    "techStack": "Tauri v2, Vanilla JS + Vite, Rust backend",
+    "architecture": "Frontend + Backend via Tauri IPC",
+    "keyFiles": [
+      "src/pages/models.js",
+      "src/pages/agent-detail.js",
+      "src/lib/model-presets.js",
+      "src/lib/mirror-urls.js"
+    ],
+    "created": "2026-04-05",
+    "updated": "2026-04-05"
+  }
+}

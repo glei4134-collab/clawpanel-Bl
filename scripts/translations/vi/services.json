@@ -1,0 +1,23 @@
+{
+  "title": "Quản lý dịch vụ",
+  "desc": "Khởi động, dừng và giám sát dịch vụ OpenClaw",
+  "gatewayTitle": "Dịch vụ Gateway",
+  "guardianTitle": "Dịch vụ Guardian",
+  "status": "Trạng thái",
+  "pid": "PID",
+  "uptime": "Thời gian hoạt động",
+  "port": "Cổng",
+  "host": "Máy chủ",
+  "start": "Khởi động",
+  "stop": "Dừng",
+  "restart": "Khởi động lại",
+  "forceKill": "Buộc dừng",
+  "viewLogs": "Xem nhật ký",
+  "starting": "Đang khởi động...",
+  "stopping": "Đang dừng...",
+  "restarting": "Đang khởi động lại...",
+  "loadFail": "Tải trạng thái thất bại",
+  "healthCheck": "Kiểm tra sức khỏe",
+  "healthOk": "Hoạt động bình thường",
+  "healthFail": "Không phản hồi"
+}

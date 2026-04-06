@@ -1,0 +1,33 @@
+                    GNU AFFERO GENERAL PUBLIC LICENSE
+                       Version 3, 19 November 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The GNU Affero General Public License is a free, copyleft license for
+software and other kinds of works, specifically designed to ensure
+cooperation with the community in the case of network server software.
+
+  The full text of the AGPL-3.0 license can be found at:
+  https://www.gnu.org/licenses/agpl-3.0.html
+
+===============================================================================
+
+Additional Terms for ClawPanel (pursuant to Section 7 of AGPL-3.0):
+
+Copyright (c) 2026 武汉晴辰天下网络科技有限公司 (QingchenCloud)
+官网: https://claw.qt.cool
+GitHub: https://github.com/qingchencloud/clawpanel
+
+Commercial Licensing:
+  If you wish to use ClawPanel in a proprietary/closed-source product or
+  service without complying with the AGPL-3.0 open-source requirements,
+  you may obtain a commercial license. Contact: keh5@vip.qq.com
+
+Brand Protection:
+  The names "ClawPanel", "晴辰云", "QingchenCloud" and associated logos
+  are trademarks of 武汉晴辰天下网络科技有限公司. Use of these trademarks
+  requires separate permission beyond the scope of this license.

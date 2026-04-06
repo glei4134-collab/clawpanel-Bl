@@ -1,0 +1,19 @@
+{
+  "title": "Geplante Aufgaben",
+  "desc": "OpenClaw-Aufgaben verwalten",
+  "addTask": "+ Aufgabe hinzufügen",
+  "noTasks": "Keine Aufgaben",
+  "taskName": "Aufgabenname",
+  "schedule": "Zeitplan",
+  "status": "Status",
+  "active": "Aktiv",
+  "inactive": "Inaktiv",
+  "edit": "Bearbeiten",
+  "delete": "Löschen",
+  "enable": "Aktivieren",
+  "disable": "Deaktivieren",
+  "runNow": "Jetzt ausführen",
+  "created": "Aufgabe erstellt",
+  "deleted": "Aufgabe gelöscht",
+  "loadFailed": "Laden fehlgeschlagen"
+}

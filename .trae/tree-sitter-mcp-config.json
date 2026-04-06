@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "tree-sitter-mcp": {
+      "command": "node",
+      "args": ["C:\\Users\\17544\\Desktop\\clawpanel-main\\.trae\\mcp-servers\\treesitter_mcp\\node_modules\\treesitter_mcp\\build\\index.js"],
+      "cwd": "C:\\Users\\17544\\Desktop\\clawpanel-main"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Gestão de Agentes",
+  "desc": "Criar e gerenciar OpenClaw Agents",
+  "addAgent": "+ Novo Agent",
+  "noAgents": "Sem Agentes",
+  "loadFailed": "Falha ao carregar",
+  "default": "Padrão",
+  "backup": "Backup",
+  "edit": "Editar",
+  "delete": "Excluir",
+  "notSet": "Não definido",
+  "addTitle": "Novo Agent",
+  "agentId": "Agent ID",
+  "agentName": "Nome",
+  "agentModel": "Modelo",
+  "created": "Agent criado",
+  "createFailed": "Falha ao criar",
+  "editTitle": "Editar Agent — {id}",
+  "updated": "Atualizado",
+  "updateFailed": "Falha ao atualizar",
+  "deleted": "Excluído",
+  "deleteFailed": "Falha ao excluir"
+}

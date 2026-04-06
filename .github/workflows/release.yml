@@ -1,0 +1,357 @@
+# ClawPanel 发布构建工作流
+# 推送 v* 标签时自动构建跨平台产物并创建 GitHub Release
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '发布版本号 (例如: v1.0.0)'
+        required: true
+        type: string
+        default: 'v1.0.0'
+
+jobs:
+  # ── 跨平台构建 job ─────────────────────────────────────────────────────────
+  build:
+    name: 构建 (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: macOS (Apple Silicon)
+            os: macos-latest
+            args: --target aarch64-apple-darwin
+            rust_target: aarch64-apple-darwin
+          - name: macOS (Intel)
+            os: macos-latest
+            args: --target x86_64-apple-darwin
+            rust_target: x86_64-apple-darwin
+          - name: Linux (x64)
+            os: ubuntu-latest
+            args: ""
+            rust_target: ""
+          - name: Windows (x64)
+            os: windows-latest
+            args: ""
+            rust_target: ""
+          - name: Windows (x64) 完整包
+            os: windows-latest
+            args: ""
+            rust_target: ""
+
+    steps:
+      - name: 签出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置版本标签
+        id: vars
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_ENV"
+          else
+            echo "TAG_NAME=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.rust_target }}
+
+      - name: Rust 编译缓存
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.platform.name }}
+
+      - name: 安装 Linux 系统依赖
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      - name: 构建 Tauri 应用
+        if: matrix.platform.name != 'Windows (x64) 完整包'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS 代码签名（可选）
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows 代码签名（可选）
+          # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ env.TAG_NAME }}
+          releaseName: "ClawPanel ${{ env.TAG_NAME }}"
+          releaseBody: "正在构建所有平台安装包，请稍候..."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.platform.args }}
+
+      # ── Windows 完整包（内嵌 WebView2 离线安装器）──────────────────────────────
+      - name: 配置 WebView2 完整包模式
+        if: matrix.platform.name == 'Windows (x64) 完整包'
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const f = 'src-tauri/tauri.conf.json';
+            const c = JSON.parse(fs.readFileSync(f, 'utf8'));
+            c.bundle.windows.webviewInstallMode = { type: 'offlineInstaller', silent: true };
+            fs.writeFileSync(f, JSON.stringify(c, null, 2));
+          "
+
+      - name: 构建 Windows 完整包
+        if: matrix.platform.name == 'Windows (x64) 完整包'
+        shell: bash
+        run: npx tauri build
+
+      - name: 重命名并上传完整包
+        if: matrix.platform.name == 'Windows (x64) 完整包'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+
+          # 确保 Release 已存在（可能被其他 matrix job 的 tauri-action 创建）
+          gh release create "$TAG_NAME" --title "ClawPanel $TAG_NAME" \
+            --notes "正在构建所有平台安装包，请稍候..." 2>/dev/null || true
+
+          # 重命名 NSIS exe 并上传
+          mv "${BUNDLE_DIR}/nsis/ClawPanel_${VERSION}_x64-setup.exe" \
+             "${BUNDLE_DIR}/nsis/ClawPanel_${VERSION}_x64-setup-full.exe"
+          gh release upload "$TAG_NAME" \
+             "${BUNDLE_DIR}/nsis/ClawPanel_${VERSION}_x64-setup-full.exe" --clobber
+
+          # 重命名 MSI 并上传
+          mv "${BUNDLE_DIR}/msi/ClawPanel_${VERSION}_x64_en-US.msi" \
+             "${BUNDLE_DIR}/msi/ClawPanel_${VERSION}_x64-full_en-US.msi"
+          gh release upload "$TAG_NAME" \
+             "${BUNDLE_DIR}/msi/ClawPanel_${VERSION}_x64-full_en-US.msi" --clobber
+
+  # ── 所有平台构建完成后，统一更新 Release Notes ─────────────────────────────
+  # 独立 job 确保只执行一次，彻底避免多个 matrix job 的竞争条件
+  update-release-notes:
+    name: 更新 Release Notes
+    needs: build
+    runs-on: ubuntu-latest
+    if: always() && needs.build.result != 'cancelled'
+    permissions:
+      contents: write
+
+    steps:
+      - name: 签出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置版本标签
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_ENV"
+          else
+            echo "TAG_NAME=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 构建前端并上传热更新包
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+
+          # 构建前端
+          npm ci
+          npm run build
+
+          # 打包 dist 目录为 zip
+          cd dist
+          zip -r "../web-${VERSION}.zip" .
+          cd ..
+
+          # 计算 SHA-256
+          HASH=$(sha256sum "web-${VERSION}.zip" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "web-${VERSION}.zip" 2>/dev/null || stat -f%z "web-${VERSION}.zip")
+
+          # 上传为 Release Asset
+          gh release upload "$TAG_NAME" "web-${VERSION}.zip" --clobber
+
+          # 读取现有 minAppVersion（前端热更新通常不需要更新 Rust 后端，保留旧值）
+          MIN_APP_VER=$(cat docs/update/latest.json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('minAppVersion','0.9.0'))" 2>/dev/null || echo "0.9.0")
+
+          # 更新 docs/update/latest.json
+          DL_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/web-${VERSION}.zip"
+          cat > docs/update/latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "minAppVersion": "${MIN_APP_VER}",
+            "hash": "sha256:${HASH}",
+            "url": "${DL_URL}",
+            "size": ${SIZE},
+            "changelog": "",
+            "releasedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          # 去掉 heredoc 缩进
+          sed -i 's/^          //' docs/update/latest.json
+
+          # 提交 latest.json 到 main 分支
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/update/latest.json
+          git commit -m "ci: update latest.json for ${TAG_NAME}" || true
+          git push origin HEAD:main || true
+
+      - name: 生成并更新 Release Notes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          REPO: ${{ github.repository }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          DL="https://github.com/${REPO}/releases/download/${TAG_NAME}"
+
+          # ── 生成分类 Changelog ──
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v' | sed -n '2p' || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..HEAD"
+            CHANGELOG_HEADER="自 ${PREV_TAG} 以来的变更"
+          else
+            RANGE=""
+            CHANGELOG_HEADER="主要变更"
+          fi
+
+          # 按 conventional commit 前缀分类
+          get_logs() {
+            local prefix="$1"
+            if [ -n "$RANGE" ]; then
+              git log "$RANGE" --pretty=format:"%s" --no-merges | { grep -iE "^${prefix}" || true; } | sed "s/^${prefix}[:(] */- /" | head -20
+            else
+              git log --pretty=format:"%s" --no-merges -30 | { grep -iE "^${prefix}" || true; } | sed "s/^${prefix}[:(] */- /" | head -20
+            fi
+          }
+
+          FEATS=$(get_logs "feat")
+          FIXES=$(get_logs "fix")
+          OTHERS=$(
+            if [ -n "$RANGE" ]; then
+              git log "$RANGE" --pretty=format:"%s" --no-merges | { grep -ivE "^(feat|fix|style|chore|ci|docs|test|build)" || true; } | sed 's/^/- /' | head -10
+            else
+              git log --pretty=format:"%s" --no-merges -30 | { grep -ivE "^(feat|fix|style|chore|ci|docs|test|build)" || true; } | sed 's/^/- /' | head -10
+            fi
+          )
+
+          CHANGELOG_BODY=""
+          if [ -n "$FEATS" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### ✨ 新功能\n'"${FEATS}"$'\n'
+          fi
+          if [ -n "$FIXES" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### 🐛 修复\n'"${FIXES}"$'\n'
+          fi
+          if [ -n "$OTHERS" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### 📦 其他\n'"${OTHERS}"$'\n'
+          fi
+          if [ -z "$CHANGELOG_BODY" ]; then
+            CHANGELOG_BODY=$'\n- 常规更新与优化\n'
+          fi
+
+          # ── 构建状态 ──
+          if [ "$BUILD_RESULT" = "success" ]; then
+            STATUS_BADGE="✅ 全部平台构建成功"
+          else
+            STATUS_BADGE="⚠️ 部分平台构建失败，请查看 [Actions 日志](https://github.com/${REPO}/actions)"
+          fi
+
+          # ── 写入 Release Notes ──
+          {
+            echo "${STATUS_BADGE}"
+            echo ""
+            echo "## 📥 下载安装"
+            echo ""
+            echo "根据你的操作系统选择对应安装包，点击文件名即可下载："
+            echo ""
+            echo "### macOS"
+            echo "| 芯片 | 安装包 |"
+            echo "|------|--------|"
+            echo "| Apple Silicon (M1/M2/M3/M4) | [ClawPanel_${VERSION}_aarch64.dmg](${DL}/ClawPanel_${VERSION}_aarch64.dmg) |"
+            echo "| Intel | [ClawPanel_${VERSION}_x64.dmg](${DL}/ClawPanel_${VERSION}_x64.dmg) |"
+            echo ""
+            echo '> **⚠️ 首次打开提示"无法验证开发者"？** 在终端执行：`sudo xattr -rd com.apple.quarantine /Applications/ClawPanel.app`，或前往 **系统设置 → 隐私与安全性** 点击「仍要打开」。'
+            echo ""
+            echo "### Windows"
+            echo "| 格式 | 安装包 | 说明 |"
+            echo "|------|--------|------|"
+            echo "| EXE 安装器（推荐） | [ClawPanel_${VERSION}_x64-setup.exe](${DL}/ClawPanel_${VERSION}_x64-setup.exe) | 轻量版 ~10 MB |"
+            echo "| EXE 完整包 | [ClawPanel_${VERSION}_x64-setup-full.exe](${DL}/ClawPanel_${VERSION}_x64-setup-full.exe) | 含 WebView2 ~200 MB |"
+            echo "| MSI 安装器 | [ClawPanel_${VERSION}_x64_en-US.msi](${DL}/ClawPanel_${VERSION}_x64_en-US.msi) | 轻量版 ~10 MB |"
+            echo "| MSI 完整包 | [ClawPanel_${VERSION}_x64-full_en-US.msi](${DL}/ClawPanel_${VERSION}_x64-full_en-US.msi) | 含 WebView2 ~200 MB |"
+            echo ""
+            echo "> **💡 轻量版 vs 完整包**：Win10 1803+ 和 Win11 已预装 WebView2，推荐下载轻量版。如果是内网/断网环境，选择完整包。"
+            echo ""
+            echo "### Linux"
+            echo "| 格式 | 安装包 |"
+            echo "|------|--------|"
+            echo "| AppImage（免安装） | [ClawPanel_${VERSION}_amd64.AppImage](${DL}/ClawPanel_${VERSION}_amd64.AppImage) |"
+            echo "| DEB（Debian/Ubuntu） | [ClawPanel_${VERSION}_amd64.deb](${DL}/ClawPanel_${VERSION}_amd64.deb) |"
+            echo "| RPM（Fedora/RHEL） | [ClawPanel-${VERSION}-1.x86_64.rpm](${DL}/ClawPanel-${VERSION}-1.x86_64.rpm) |"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## 🚀 首次使用"
+            echo ""
+            echo "1. 安装并打开 ClawPanel"
+            echo "2. 首次运行会自动检测 Node.js 环境和 OpenClaw CLI"
+            echo "3. 如未安装 OpenClaw，按提示一键安装即可"
+            echo "4. 安装完成后自动跳转仪表盘，开始使用"
+            echo ""
+            echo '> **系统要求**：Node.js 18+（推荐 22 LTS）'
+            echo ""
+            echo "---"
+            echo ""
+            echo "## ${CHANGELOG_HEADER}"
+            echo "${CHANGELOG_BODY}"
+            echo "---"
+            echo ""
+            echo "📖 [项目主页](https://github.com/${REPO}) · 💬 [反馈问题](https://github.com/${REPO}/issues) · 📣 [QQ 群](https://qt.cool/c/OpenClaw)"
+          } > release_body.md
+
+          gh release edit "$TAG_NAME" --notes-file release_body.md

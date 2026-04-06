@@ -1,0 +1,12 @@
+{
+  "preferences": {
+    "language": "Chinese",
+    "codingStyle": "modular",
+    "comments": "Chinese comments preferred"
+  },
+  "identity": {
+    "name": "Unknown",
+    "timezone": "Asia/Shanghai"
+  },
+  "updated": "2026-04-05"
+}

@@ -1,0 +1,17 @@
+{
+  "title": "ログ",
+  "desc": "OpenClaw サービスログを表示",
+  "tabGateway": "Gateway ログ",
+  "tabGatewayErr": "Gateway エラー",
+  "tabGuardian": "ガーディアン",
+  "tabBackup": "バックアップログ",
+  "tabAudit": "監査ログ",
+  "searchPlaceholder": "ログを検索...",
+  "refresh": "更新",
+  "autoScroll": "自動スクロール",
+  "loading": "ログ読み込み中...",
+  "empty": "ログなし",
+  "loadFailed": "ログの読み込みに失敗",
+  "noResults": "一致する結果なし",
+  "searchFailed": "検索失敗"
+}
