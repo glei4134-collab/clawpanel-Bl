@@ -1069,6 +1069,24 @@ function renderSplitView() {
     chatMain.style.display = 'none'
     page.insertBefore(splitWrapper, chatMain)
     
+    console.log('[chat] 分屏初始化工作区面板:', { 
+      workspacePanelEl: !!_workspacePanelEl,
+      workspacePanelDisplay: _workspacePanelEl?.style.display,
+      workspacePanelParent: _workspacePanelEl?.parentElement?.className
+    })
+    
+    if (_workspacePanelEl) {
+      if (_workspacePanelEl.style.display !== 'none') {
+        document.body.appendChild(_workspacePanelEl)
+        _workspacePanelEl.style.position = 'fixed'
+        _workspacePanelEl.style.top = '60px'
+        _workspacePanelEl.style.right = '16px'
+        _workspacePanelEl.style.bottom = ''
+        _workspacePanelEl.style.left = ''
+        console.log('[chat] 工作区面板已移到 body')
+      }
+    }
+    
     setupSplitDivider(divider)
     setupLeftPanelEvents()
     setupRightPanelEvents()
@@ -1077,6 +1095,10 @@ function renderSplitView() {
     setTimeout(() => applyUIConfig(), 50)
     
   } else {
+    if (_workspacePanelEl && _workspacePanelEl.parentElement !== chatMain) {
+      chatMain.appendChild(_workspacePanelEl)
+      _workspacePanelEl.style.position = 'absolute'
+    }
     chatMain.style.display = ''
   }
 }
@@ -1521,8 +1543,10 @@ function setupLeftPanelEvents() {
     console.log('[chat] _leftWorkspaceOpen:', _leftWorkspaceOpen)
     
     if (_workspacePanelEl) {
-      console.log('[chat] 显示/隐藏工作区面板')
+      console.log('[chat] 显示/隐藏工作区面板, display:', _leftWorkspaceOpen ? '' : 'none')
       _workspacePanelEl.style.display = _leftWorkspaceOpen ? '' : 'none'
+      console.log('[chat] 面板实际display:', _workspacePanelEl.style.display)
+      console.log('[chat] 面板父元素:', _workspacePanelEl.parentElement?.tagName, _workspacePanelEl.parentElement?.className)
     } else {
       console.log('[chat] _workspacePanelEl is null!')
     }
@@ -3415,6 +3439,11 @@ function toggleRightCmdPanel() {
   if (!rightPanel) return
   const textarea = rightPanel.querySelector('#split-input')
   const cmdPanel = rightPanel.querySelector('#split-cmd-panel')
+  console.log('[chat] toggleRightCmdPanel:', { 
+    hasTextarea: !!textarea, 
+    hasCmdPanel: !!cmdPanel,
+    cmdPanelDisplay: cmdPanel?.style?.display
+  })
   if (!textarea || !cmdPanel) return
   if (cmdPanel.style.display === 'block') {
     cmdPanel.style.display = 'none'
