@@ -617,9 +617,9 @@ export async function applyBgImage(imageData) {
   const bgLayer = document.getElementById('ui-bg-layer')
   if (imageUrl) {
     if (bgLayer) {
-      bgLayer.setAttribute('style', 'position:fixed;inset:0;z-index:-1;background:url(' + imageUrl + ') center/cover no-repeat fixed;background-color:transparent;pointer-events:none;')
+      bgLayer.setAttribute('style', 'position:fixed;inset:0;z-index:-1;background:url(' + imageUrl + ') center/cover no-repeat;background-color:transparent;pointer-events:none;')
     }
-    document.body.style.background = 'url(' + imageUrl + ') center/cover no-repeat fixed'
+    document.body.style.background = 'url(' + imageUrl + ') center/cover no-repeat'
     document.body.style.backgroundColor = 'transparent'
     let styleEl = document.getElementById('ui-bg-override')
     if (!styleEl) {
@@ -627,13 +627,13 @@ export async function applyBgImage(imageData) {
       styleEl.id = 'ui-bg-override'
       document.head.appendChild(styleEl)
     }
-    styleEl.textContent = '#ui-bg-layer,body,html { background-image: url(' + imageUrl + ') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; background-color: transparent !important; }'
+    styleEl.textContent = '#ui-bg-layer,body,html { background-image: url(' + imageUrl + ') !important; background-size: cover !important; background-position: center center !important; background-repeat: no-repeat !important; background-attachment: scroll !important; background-color: transparent !important; }'
     console.log('[UI] Set custom image:', imageUrl)
   } else {
     if (bgLayer) {
-      bgLayer.setAttribute('style', 'position:fixed;inset:0;z-index:-1;background:url(./images/bg.png) center/cover no-repeat fixed;background-color:#0f172a;pointer-events:none;')
+      bgLayer.setAttribute('style', 'position:fixed;inset:0;z-index:-1;background:url(./images/bg.png) center/cover no-repeat;background-color:#0f172a;pointer-events:none;')
     }
-    document.body.style.background = 'url(./images/bg.png) center/cover no-repeat fixed'
+    document.body.style.background = 'url(./images/bg.png) center/cover no-repeat'
     console.log('[UI] Set default image')
   }
 }
@@ -931,11 +931,59 @@ export function saveCardAlpha(val) {
 
 // 设置浮动面板自身效果（实时预览，不保存）
 export function applyPanelAlpha(val) {
-  document.documentElement.style.setProperty('--ui-panel-alpha', val / 100)
+  const alpha = val / 100
+  document.documentElement.style.setProperty('--ui-panel-alpha', alpha)
+  
+  const bgColor = `rgba(255, 255, 255, ${alpha})`
+  
+  const panels = [
+    '.ui-settings-float-panel',
+    '.chat-workspace-panel',
+    '#chat-workspace-panel',
+    '.chat-cmd-panel',
+    '.chat-attachments-preview'
+  ]
+  
+  panels.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.style.backgroundColor = bgColor
+    })
+  })
+  
+  const splitWrapper = document.querySelector('.chat-split-wrapper')
+  if (splitWrapper) {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+      el.style.backgroundColor = bgColor
+    })
+  }
 }
 
 export function applyPanelBlur(val) {
-  document.documentElement.style.setProperty('--ui-panel-blur', val + 'px')
+  const blur = val + 'px'
+  document.documentElement.style.setProperty('--ui-panel-blur', blur)
+  
+  const panels = [
+    '.ui-settings-float-panel',
+    '.chat-workspace-panel',
+    '#chat-workspace-panel',
+    '.chat-cmd-panel',
+    '.chat-attachments-preview'
+  ]
+  
+  panels.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.style.backdropFilter = `blur(${blur})`
+      el.style.webkitBackdropFilter = `blur(${blur})`
+    })
+  })
+  
+  const splitWrapper = document.querySelector('.chat-split-wrapper')
+  if (splitWrapper) {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+      el.style.backdropFilter = `blur(${blur})`
+      el.style.webkitBackdropFilter = `blur(${blur})`
+    })
+  }
 }
 
 // 保存面板透明度（保存到配置）
@@ -958,6 +1006,34 @@ export function applyPanelStyle() {
   const panelBlur = config.panelBlur ?? 0
   document.documentElement.style.setProperty('--ui-panel-alpha', panelAlpha)
   document.documentElement.style.setProperty('--ui-panel-blur', panelBlur + 'px')
+  
+  const bgColor = `rgba(255, 255, 255, ${panelAlpha})`
+  const blurValue = panelBlur + 'px'
+  
+  const panels = [
+    '.ui-settings-float-panel',
+    '.chat-workspace-panel',
+    '#chat-workspace-panel',
+    '.chat-cmd-panel',
+    '.chat-attachments-preview'
+  ]
+  
+  panels.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.style.backgroundColor = bgColor
+      el.style.backdropFilter = `blur(${blurValue})`
+      el.style.webkitBackdropFilter = `blur(${blurValue})`
+    })
+  })
+  
+  const splitWrapper = document.querySelector('.chat-split-wrapper')
+  if (splitWrapper) {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+      el.style.backgroundColor = bgColor
+      el.style.backdropFilter = `blur(${blurValue})`
+      el.style.webkitBackdropFilter = `blur(${blurValue})`
+    })
+  }
 }
 
 // ========== 音量设置 ==========

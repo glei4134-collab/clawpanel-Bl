@@ -1,0 +1,42 @@
+# 3D模型目录
+
+在此目录放置 GLB/GLTF 格式的3D模型文件。
+
+## 推荐的模型
+
+1. **使用 Tripo3D 生成** - AI驱动的3D模型生成平台
+   - https://www.tripo3d.ai/
+   - 导出格式选择 GLB
+
+2. **从 Sketchfab 下载**
+   - https://sketchfab.com/
+   - 选择支持下载的模型
+
+## 模型要求
+
+- **格式**: GLB (推荐) 或 GLTF
+- **面数**: 20k-50k (PC) / 5k-20k (移动端)
+- **文件大小**: < 5MB
+- **必需**: 包含 BlendShape/MorphTargets 用于表情控制
+
+## 文件命名
+
+建议使用语义化命名：
+- `avatar.glb` - 默认人偶模型
+- `avatar-female.glb` - 女性人偶
+- `avatar-cute.glb` - 可爱人偶
+
+## 使用方法
+
+1. 将模型文件放入此目录
+2. 在组件初始化时指定模型路径：
+
+```javascript
+import { createAvatar3D } from '../components/avatar-3d/index.js'
+
+const container = document.getElementById('avatar-container')
+const avatar = createAvatar3D(container, {
+  modelPath: '/models/avatar.glb',
+  showEmotionPanel: true
+})
+```

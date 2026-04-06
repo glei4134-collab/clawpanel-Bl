@@ -186,7 +186,7 @@ function ensureBgDiv() {
   if (!bgDiv) {
     bgDiv = document.createElement('div')
     bgDiv.id = 'ui-bg-div'
-    bgDiv.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed;'
+    bgDiv.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;background-size:cover;background-position:center center;background-repeat:no-repeat;background-attachment:scroll;'
     document.body.insertBefore(bgDiv, document.body.firstChild)
   }
   return bgDiv

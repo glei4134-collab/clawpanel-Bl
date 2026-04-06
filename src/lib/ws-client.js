@@ -284,6 +284,9 @@ export class WsClient {
 
     // 事件转发
     if (msg.type === 'event') {
+      // 追踪所有事件
+      console.log(`[ws] 收到事件: event=${msg.event}, session=${msg.payload?.sessionKey}, state=${msg.payload?.state}`)
+      
       // 消息去重检查
       if (msg.id && this._seenMessageIds.has(msg.id)) {
         console.log('[ws] 跳过重复消息:', msg.id)

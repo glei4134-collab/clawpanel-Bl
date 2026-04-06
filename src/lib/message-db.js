@@ -32,42 +32,63 @@ function openDB() {
 }
 
 export async function saveMessage(message) {
-  if (!message || !message.id) return
+  if (!message || !message.id) return Promise.resolve()
   try {
     const db = await openDB()
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).put({
-      id: message.id,
-      sessionKey: message.sessionKey || '',
-      role: message.role || 'assistant',
-      content: message.content || message.text || '',
-      timestamp: message.timestamp || Date.now(),
-      sync: true
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      const request = store.put({
+        id: message.id,
+        sessionKey: message.sessionKey || '',
+        role: message.role || 'assistant',
+        content: message.content || message.text || '',
+        timestamp: message.timestamp || Date.now(),
+        sync: true
+      })
+      request.onsuccess = () => resolve()
+      request.onerror = () => {
+        console.error('[db] saveMessage error:', request.error)
+        resolve()
+      }
+      tx.onerror = () => {
+        console.error('[db] saveMessage transaction error:', tx.error)
+        resolve()
+      }
     })
   } catch (e) {
     console.error('[db] saveMessage error:', e)
+    return Promise.resolve()
   }
 }
 
 export async function saveMessages(messages) {
-  if (!messages?.length) return
+  if (!messages?.length) return Promise.resolve()
   try {
     const db = await openDB()
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-    messages.forEach(msg => {
-      if (!msg.id) return
-      store.put({
-        id: msg.id,
-        sessionKey: msg.sessionKey || '',
-        role: msg.role || 'assistant',
-        content: msg.content || msg.text || '',
-        timestamp: msg.timestamp || Date.now(),
-        sync: true
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      messages.forEach(msg => {
+        if (!msg.id) return
+        store.put({
+          id: msg.id,
+          sessionKey: msg.sessionKey || '',
+          role: msg.role || 'assistant',
+          content: msg.content || msg.text || '',
+          timestamp: msg.timestamp || Date.now(),
+          sync: true
+        })
       })
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => {
+        console.error('[db] saveMessages error:', tx.error)
+        resolve()
+      }
     })
   } catch (e) {
     console.error('[db] saveMessages error:', e)
+    return Promise.resolve()
   }
 }
 
@@ -79,12 +100,35 @@ export async function getLocalMessages(sessionKey, limit = 200) {
       const index = tx.objectStore(STORE_NAME).index('sessionKey_timestamp')
       const range = IDBKeyRange.bound([sessionKey, 0], [sessionKey, Date.now() + 1])
       const messages = []
+      const seenIds = new Set()
+      const seenContentKeys = new Set()
+      let skippedDuplicate = 0
       const request = index.openCursor(range, 'prev')
       request.onsuccess = (event) => {
         const cursor = event.target.result
-        if (cursor && messages.length < limit) { messages.push(cursor.value); cursor.continue() }
+        if (cursor) {
+          const msg = cursor.value
+          const idKey = msg.id || `${msg.role}:${msg.content}:${msg.timestamp}`
+          const contentKey = `${msg.role}:${msg.content || ''}`
+          
+          if (!seenIds.has(idKey) && !seenContentKeys.has(contentKey)) {
+            seenIds.add(idKey)
+            seenContentKeys.add(contentKey)
+            if (messages.length < limit) {
+              messages.push(msg)
+            }
+          } else {
+            skippedDuplicate++
+          }
+          cursor.continue()
+        }
       }
-      tx.oncomplete = () => resolve(messages.reverse())
+      tx.oncomplete = () => {
+        if (skippedDuplicate > 0) {
+          console.log(`[db] getLocalMessages 去重: 跳过 ${skippedDuplicate} 条重复消息`)
+        }
+        resolve(messages.reverse())
+      }
       tx.onerror = () => resolve([])
     })
   } catch (e) {

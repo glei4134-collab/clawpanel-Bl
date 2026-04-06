@@ -8,6 +8,7 @@ if (window._splashTimer) { clearTimeout(window._splashTimer); window._splashTime
 import { registerRoute, initRouter, navigate, setDefaultRoute } from './router.js'
 import { renderSidebar, openMobileSidebar } from './components/sidebar.js'
 import { initTheme } from './lib/theme.js'
+import { initWindowManager } from './lib/window-manager.js'
 import { detectOpenclawStatus, isOpenclawReady, isUpgrading, isGatewayRunning, onGatewayChange, startGatewayPoll, onGuardianGiveUp, resetAutoRestart, loadActiveInstance, getActiveInstance, onInstanceChange } from './lib/app-state.js'
 import { wsClient } from './lib/ws-client.js'
 import { api, checkBackendHealth, isBackendOnline, isTauriRuntime, onBackendStatusChange } from './lib/tauri-api.js'
@@ -41,6 +42,9 @@ import './style/cursor.css'
 // 初始化主题 + 国际化
 initTheme()
 initI18n()
+
+// 初始化分屏/多窗口事件补丁
+initWindowManager()
 
 // 初始化 UI 自定义（背景、透明度、点击音效）
 applyUIConfig()
@@ -476,6 +480,7 @@ async function boot() {
   registerRoute('/usage', () => import('./pages/usage.js'))
   registerRoute('/communication', () => import('./pages/communication.js'))
   registerRoute('/settings', () => import('./pages/settings.js'))
+  registerRoute('/avatar-3d-demo', () => import('./pages/avatar-3d-demo.js'))
 
   renderSidebar(sidebar)
   initRouter(content)
