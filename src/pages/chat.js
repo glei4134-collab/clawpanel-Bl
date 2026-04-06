@@ -1509,6 +1509,7 @@ function setupLeftPanelEvents() {
   }
   
   leftPanel.querySelector('#left-btn-chat-workspace')?.addEventListener('click', async (e) => {
+    console.log('[chat] 左侧工作区按钮点击')
     e.stopPropagation()
     if (_leftWorkspaceOpen && _leftWorkspaceDirty) {
       const yes = await showConfirm(t('chat.confirmDiscardWorkspaceChanges'))
@@ -1517,14 +1518,19 @@ function setupLeftPanelEvents() {
     }
     
     _leftWorkspaceOpen = !_leftWorkspaceOpen
+    console.log('[chat] _leftWorkspaceOpen:', _leftWorkspaceOpen)
     
     if (_workspacePanelEl) {
+      console.log('[chat] 显示/隐藏工作区面板')
       _workspacePanelEl.style.display = _leftWorkspaceOpen ? '' : 'none'
+    } else {
+      console.log('[chat] _workspacePanelEl is null!')
     }
     leftPanel.querySelector('#left-btn-chat-workspace')?.classList.toggle('is-active', _leftWorkspaceOpen)
     
     if (_leftWorkspaceOpen) {
       _workspaceCurrentAgentId = parseSessionAgent(_sessionKey) || 'main'
+      console.log('[chat] 同步工作区上下文, agent:', _workspaceCurrentAgentId)
       syncWorkspaceContext(true, _sessionKey)
     }
   })
