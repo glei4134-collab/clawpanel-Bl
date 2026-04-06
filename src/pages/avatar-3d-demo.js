@@ -6,7 +6,6 @@
 import { createAvatar3D, createEmotionPanel, EMOTIONS } from '../components/avatar-3d/index.js'
 
 const AVAILABLE_MODELS = [
-  { path: '/models/soldier-color.glb', name: '🎖️ 彩色士兵 ⭐推荐', size: '2MB', hasColor: true },
   { path: '/models/raccoon_head.glb', name: '🦝 浣熊头像 ⭐表情', size: '9MB', hasEmotion: true },
   { path: '/models/avatar-frog.glb', name: '🐸 青蛙', size: '20MB' },
   { path: '/models/avatar-elf.glb', name: '🧝 精灵', size: '36MB' },

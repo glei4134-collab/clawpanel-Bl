@@ -940,6 +940,7 @@ export function applyPanelAlpha(val) {
     '.ui-settings-float-panel',
     '.chat-workspace-panel',
     '#chat-workspace-panel',
+    '.chat-workspace-panel-split',
     '.chat-cmd-panel',
     '.chat-attachments-preview'
   ]
@@ -952,7 +953,7 @@ export function applyPanelAlpha(val) {
   
   const splitWrapper = document.querySelector('.chat-split-wrapper')
   if (splitWrapper) {
-    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-workspace-panel-split, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
       el.style.backgroundColor = bgColor
     })
   }
@@ -966,6 +967,7 @@ export function applyPanelBlur(val) {
     '.ui-settings-float-panel',
     '.chat-workspace-panel',
     '#chat-workspace-panel',
+    '.chat-workspace-panel-split',
     '.chat-cmd-panel',
     '.chat-attachments-preview'
   ]
@@ -979,7 +981,7 @@ export function applyPanelBlur(val) {
   
   const splitWrapper = document.querySelector('.chat-split-wrapper')
   if (splitWrapper) {
-    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-workspace-panel-split, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
       el.style.backdropFilter = `blur(${blur})`
       el.style.webkitBackdropFilter = `blur(${blur})`
     })
@@ -1014,6 +1016,7 @@ export function applyPanelStyle() {
     '.ui-settings-float-panel',
     '.chat-workspace-panel',
     '#chat-workspace-panel',
+    '.chat-workspace-panel-split',
     '.chat-cmd-panel',
     '.chat-attachments-preview'
   ]
@@ -1028,7 +1031,7 @@ export function applyPanelStyle() {
   
   const splitWrapper = document.querySelector('.chat-split-wrapper')
   if (splitWrapper) {
-    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
+    splitWrapper.querySelectorAll('.chat-workspace-panel, .chat-workspace-panel-split, .chat-cmd-panel, .chat-attachments-preview').forEach(el => {
       el.style.backgroundColor = bgColor
       el.style.backdropFilter = `blur(${blurValue})`
       el.style.webkitBackdropFilter = `blur(${blurValue})`

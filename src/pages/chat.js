@@ -62,6 +62,8 @@ const COMMANDS = [
 let _sessionKey = null, _page = null, _messagesEl = null, _textarea = null
 let _sendBtn = null, _statusDot = null, _typingEl = null, _scrollBtn = null
 let _sessionListEl = null, _cmdPanelEl = null, _attachPreviewEl = null, _fileInputEl = null
+let _leftAttachPreviewEl = null, _rightAttachPreviewEl = null
+let _leftAttachments = [], _rightAttachments = []
 let _modelSelectEl = null
 let _currentAiBubble = null, _currentAiTextSpan = null, _currentAiText = '', _currentAiImages = [], _currentAiVideos = [], _currentAiAudios = [], _currentAiFiles = [], _currentAiTools = [], _currentRunId = null
 let _isStreaming = false, _isSending = false, _messageQueue = [], _streamStartTime = 0
@@ -798,6 +800,23 @@ let _leftWorkspaceOpen = false
 let _rightWorkspaceOpen = false
 let _leftWorkspaceDirty = false
 let _rightWorkspaceDirty = false
+
+let _leftWorkspacePanelEl = null
+let _rightWorkspacePanelEl = null
+let _leftWorkspaceAgentId = 'main'
+let _rightWorkspaceAgentId = 'main'
+let _leftWorkspaceInfo = null
+let _rightWorkspaceInfo = null
+let _leftWorkspaceCoreFiles = []
+let _rightWorkspaceCoreFiles = []
+let _leftWorkspaceTreeCache = new Map()
+let _rightWorkspaceTreeCache = new Map()
+let _leftWorkspaceExpandedDirs = new Set()
+let _rightWorkspaceExpandedDirs = new Set()
+let _leftWorkspaceCurrentFile = null
+let _rightWorkspaceCurrentFile = null
+let _leftWorkspaceLoadSeq = 0
+let _rightWorkspaceLoadSeq = 0
 let _loadingSplitSession = false
 let _loadingMainSession = false
 let _leftCurrentAiImages = [], _leftCurrentAiVideos = [], _leftCurrentAiAudios = [], _leftCurrentAiFiles = []
@@ -1034,10 +1053,15 @@ function renderSplitView() {
     const leftChatHeader = leftContent.querySelector('.chat-header')
     if (leftChatHeader) leftChatHeader.remove()
     const leftMessagesArea = leftContent.querySelector('#chat-messages-area')
-    console.log('[chat] 克隆前左侧消息数量:', leftMessagesArea?.children.length)
     if (leftMessagesArea) leftMessagesArea.innerHTML = ''
-    console.log('[chat] 清空后左侧消息数量:', leftMessagesArea?.children.length)
     leftPanel.appendChild(leftContent)
+    
+    const leftWorkspaceContainer = document.createElement('div')
+    leftWorkspaceContainer.innerHTML = createWorkspacePanelHTML('left')
+    const leftWorkspacePanel = leftWorkspaceContainer.firstElementChild
+    leftWorkspacePanel.style.position = 'absolute'
+    leftPanel.appendChild(leftWorkspacePanel)
+    _leftWorkspacePanelEl = leftWorkspacePanel
     
     const divider = document.createElement('div')
     divider.id = 'chat-split-divider'
@@ -1057,10 +1081,15 @@ function renderSplitView() {
     const rightChatHeader = rightContent.querySelector('.chat-header')
     if (rightChatHeader) rightChatHeader.remove()
     const rightMessagesArea = rightContent.querySelector('#chat-messages-area')
-    console.log('[chat] 克隆前右侧消息数量:', rightMessagesArea?.children.length)
     if (rightMessagesArea) rightMessagesArea.innerHTML = ''
-    console.log('[chat] 清空后右侧消息数量:', rightMessagesArea?.children.length)
     rightPanel.appendChild(rightContent)
+    
+    const rightWorkspaceContainer = document.createElement('div')
+    rightWorkspaceContainer.innerHTML = createWorkspacePanelHTML('right')
+    const rightWorkspacePanel = rightWorkspaceContainer.firstElementChild
+    rightWorkspacePanel.style.position = 'absolute'
+    rightPanel.appendChild(rightWorkspacePanel)
+    _rightWorkspacePanelEl = rightWorkspacePanel
     
     splitWrapper.appendChild(leftPanel)
     splitWrapper.appendChild(divider)
@@ -1068,24 +1097,6 @@ function renderSplitView() {
     
     chatMain.style.display = 'none'
     page.insertBefore(splitWrapper, chatMain)
-    
-    console.log('[chat] 分屏初始化工作区面板:', { 
-      workspacePanelEl: !!_workspacePanelEl,
-      workspacePanelDisplay: _workspacePanelEl?.style.display,
-      workspacePanelParent: _workspacePanelEl?.parentElement?.className
-    })
-    
-    if (_workspacePanelEl) {
-      if (_workspacePanelEl.style.display !== 'none') {
-        document.body.appendChild(_workspacePanelEl)
-        _workspacePanelEl.style.position = 'fixed'
-        _workspacePanelEl.style.top = '60px'
-        _workspacePanelEl.style.right = '16px'
-        _workspacePanelEl.style.bottom = ''
-        _workspacePanelEl.style.left = ''
-        console.log('[chat] 工作区面板已移到 body')
-      }
-    }
     
     setupSplitDivider(divider)
     setupLeftPanelEvents()
@@ -1136,6 +1147,175 @@ function createSplitPanelHeader(sessionKey, side) {
   header.appendChild(resetBtn)
   
   return header
+}
+
+async function loadSplitWorkspaceData(side, agentId) {
+  const prefix = side === 'left' ? 'left' : 'split'
+  if (side === 'left') {
+    _leftWorkspaceLoadSeq++
+  } else {
+    _rightWorkspaceLoadSeq++
+  }
+  const loadSeq = side === 'left' ? _leftWorkspaceLoadSeq : _rightWorkspaceLoadSeq
+  const cache = side === 'left' ? _leftWorkspaceTreeCache : _rightWorkspaceTreeCache
+  const expanded = side === 'left' ? _leftWorkspaceExpandedDirs : _rightWorkspaceExpandedDirs
+  
+  const coreListEl = document.getElementById(`${prefix}-workspace-core-list`)
+  const treeEl = document.getElementById(`${prefix}-workspace-tree`)
+  const agentBadgeEl = document.getElementById(`${prefix}-workspace-agent-badge`)
+  const agentTitleEl = document.getElementById(`${prefix}-workspace-agent-title`)
+  
+  if (!coreListEl || !treeEl) return
+  
+  if (agentBadgeEl) agentBadgeEl.textContent = agentId
+  if (agentTitleEl) agentTitleEl.textContent = getDisplayLabel(side === 'left' ? _sessionKey : _splitSessionKey)
+  
+  coreListEl.innerHTML = `<div class="chat-workspace-note">${t('common.loading')}</div>`
+  treeEl.innerHTML = `<div class="chat-workspace-note">${t('common.loading')}</div>`
+  
+  try {
+    const [info, coreFiles, rootEntries] = await Promise.all([
+      api.getAgentWorkspaceInfo(agentId),
+      api.listAgentFiles(agentId),
+      api.listAgentWorkspaceEntries(agentId, ''),
+    ])
+    
+    if (loadSeq !== (side === 'left' ? _leftWorkspaceLoadSeq : _rightWorkspaceLoadSeq)) return
+    
+    if (side === 'left') {
+      _leftWorkspaceInfo = info || null
+      _leftWorkspaceCoreFiles = Array.isArray(coreFiles) ? coreFiles : []
+    } else {
+      _rightWorkspaceInfo = info || null
+      _rightWorkspaceCoreFiles = Array.isArray(coreFiles) ? coreFiles : []
+    }
+    
+    cache.set('', Array.isArray(rootEntries) ? rootEntries : [])
+    expanded.clear()
+    
+    renderSplitWorkspaceCoreFiles(side, coreFiles || [])
+    renderSplitWorkspaceTree(side, '')
+  } catch (err) {
+    console.error('[chat] 加载工作区失败:', err)
+    coreListEl.innerHTML = `<div class="chat-workspace-note" style="color:#ef4444">${t('chat.workspaceLoadFailed')}</div>`
+    treeEl.innerHTML = `<div class="chat-workspace-note" style="color:#ef4444">${t('chat.workspaceLoadFailed')}</div>`
+  }
+}
+
+function renderSplitWorkspaceCoreFiles(side, coreFiles) {
+  const prefix = side === 'left' ? 'left' : 'split'
+  const coreListEl = document.getElementById(`${prefix}-workspace-core-list`)
+  if (!coreListEl) return
+  
+  if (!coreFiles || coreFiles.length === 0) {
+    coreListEl.innerHTML = `<div class="chat-workspace-note">${t('chat.noCoreFiles')}</div>`
+    return
+  }
+  
+  coreListEl.innerHTML = coreFiles.map(f => `
+    <div class="chat-workspace-core-item" data-core-path="${f.path}" data-core-exists="${f.exists ? '1' : '0'}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>${f.path}</span>
+      ${f.exists ? '' : '<span class="chat-workspace-core-new">新建</span>'}
+    </div>
+  `).join('')
+}
+
+function renderSplitWorkspaceTree(side, relativePath) {
+  const prefix = side === 'left' ? 'left' : 'split'
+  const treeEl = document.getElementById(`${prefix}-workspace-tree`)
+  const cache = side === 'left' ? _leftWorkspaceTreeCache : _rightWorkspaceTreeCache
+  const expanded = side === 'left' ? _leftWorkspaceExpandedDirs : _rightWorkspaceExpandedDirs
+  
+  if (!treeEl) return
+  
+  const entries = cache.get(relativePath) || []
+  if (entries.length === 0) {
+    treeEl.innerHTML = `<div class="chat-workspace-note">${t('chat.workspaceEmptyState')}</div>`
+    return
+  }
+  
+  const renderEntry = (entry, depth = 0) => {
+    const paddingLeft = 12 + depth * 16
+    if (entry.type === 'dir') {
+      const isExpanded = expanded.has(entry.path)
+      return `
+        <div class="chat-workspace-tree-item chat-workspace-tree-dir" data-tree-toggle="${entry.path}" style="padding-left:${paddingLeft}px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(${isExpanded ? 90 : 0}deg);transition:transform 0.15s"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>${entry.name}</span>
+        </div>
+        ${isExpanded ? (entry.children || []).map(c => renderEntry(c, depth + 1)).join('') : ''}
+      `
+    } else {
+      return `
+        <div class="chat-workspace-tree-item chat-workspace-tree-file" data-tree-path="${entry.path}" data-tree-type="${entry.type}" style="padding-left:${paddingLeft}px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>${entry.name}</span>
+        </div>
+      `
+    }
+  }
+  
+  treeEl.innerHTML = entries.map(e => renderEntry(e, 0)).join('')
+}
+
+function createWorkspacePanelHTML(side) {
+  const prefix = side === 'left' ? 'left' : 'split'
+  return `
+    <div class="chat-workspace-panel-split" id="${prefix}-workspace-panel" style="display:none">
+      <div class="chat-workspace-header">
+        <div class="chat-workspace-header-copy">
+          <div class="chat-workspace-title-row">
+            <strong>${t('chat.workspaceFiles')}</strong>
+            <span class="chat-workspace-agent-badge" id="${prefix}-workspace-agent-badge">main</span>
+          </div>
+          <div class="chat-workspace-agent-title" id="${prefix}-workspace-agent-title"></div>
+          <div class="chat-workspace-path" id="${prefix}-workspace-path"></div>
+        </div>
+        <div class="chat-workspace-header-actions">
+          <button class="chat-workspace-icon-btn" id="${prefix}-workspace-refresh" title="${t('common.refresh')}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="chat-workspace-icon-btn" id="${prefix}-workspace-close" title="${t('common.close')}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="chat-workspace-body">
+        <div class="chat-workspace-sidebar-pane">
+          <div class="chat-workspace-section">
+            <div class="chat-workspace-section-title">${t('chat.coreFiles')}</div>
+            <div class="chat-workspace-core-list" id="${prefix}-workspace-core-list"></div>
+          </div>
+          <div class="chat-workspace-section">
+            <div class="chat-workspace-section-title">${t('chat.workspaceExplorer')}</div>
+            <div class="chat-workspace-tree" id="${prefix}-workspace-tree"></div>
+          </div>
+        </div>
+        <div class="chat-workspace-editor-pane">
+          <div class="chat-workspace-editor-toolbar">
+            <div class="chat-workspace-current-file" id="${prefix}-workspace-current-file">${t('chat.selectWorkspaceFile')}</div>
+            <div class="chat-workspace-editor-actions">
+              <button class="btn btn-sm btn-ghost" id="${prefix}-workspace-reload" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                ${t('chat.reloadWorkspaceFile')}
+              </button>
+              <button class="btn btn-sm btn-ghost" id="${prefix}-workspace-preview-toggle" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span id="${prefix}-workspace-preview-label">${t('chat.previewWorkspaceFile')}</span>
+              </button>
+              <button class="btn btn-sm btn-primary" id="${prefix}-workspace-save" disabled>${t('common.save')}</button>
+            </div>
+          </div>
+          <div class="chat-workspace-editor-meta" id="${prefix}-workspace-editor-meta"></div>
+          <textarea class="chat-workspace-editor" id="${prefix}-workspace-editor" spellcheck="false" disabled placeholder="${t('chat.selectWorkspaceFile')}"></textarea>
+          <div class="chat-workspace-preview" id="${prefix}-workspace-preview" style="display:none"></div>
+          <div class="chat-workspace-empty" id="${prefix}-workspace-empty">${t('chat.workspaceEmptyState')}</div>
+        </div>
+      </div>
+    </div>
+  `
 }
 
 async function loadSplitSessionsOptions() {
@@ -1494,10 +1674,19 @@ function hideSplitIndicator() {
 function setupLeftPanelEvents() {
   console.log('[chat] setupLeftPanelEvents 调用')
   const leftPanel = document.getElementById('chat-split-left')
+  console.log('[chat] leftPanel:', !!leftPanel, leftPanel?.id, leftPanel?.className)
   if (!leftPanel) return
   
   leftPanel.querySelectorAll('[id]').forEach(el => {
-    if (el.tagName === 'BUTTON') return
+    if (el.tagName === 'BUTTON') {
+      if (el.id.startsWith('chat-')) {
+        el.id = el.id.replace('chat-', 'left-')
+      }
+      if (el.id.startsWith('btn-')) {
+        el.id = el.id.replace('btn-', 'left-btn-')
+      }
+      return
+    }
     if (el.id.startsWith('chat-')) {
       el.id = el.id.replace('chat-', 'left-')
     }
@@ -1508,6 +1697,9 @@ function setupLeftPanelEvents() {
       el.id = el.id.replace('btn-', 'left-btn-')
     }
   })
+  
+  const wsBtn = leftPanel.querySelector('#left-btn-chat-workspace')
+  console.log('[chat] 查找工作区按钮:', !!wsBtn, wsBtn?.id)
   
   const input = leftPanel.querySelector('#left-input')
   const sendBtn = leftPanel.querySelector('#left-send-btn')
@@ -1531,7 +1723,6 @@ function setupLeftPanelEvents() {
   }
   
   leftPanel.querySelector('#left-btn-chat-workspace')?.addEventListener('click', async (e) => {
-    console.log('[chat] 左侧工作区按钮点击')
     e.stopPropagation()
     if (_leftWorkspaceOpen && _leftWorkspaceDirty) {
       const yes = await showConfirm(t('chat.confirmDiscardWorkspaceChanges'))
@@ -1540,27 +1731,37 @@ function setupLeftPanelEvents() {
     }
     
     _leftWorkspaceOpen = !_leftWorkspaceOpen
-    console.log('[chat] _leftWorkspaceOpen:', _leftWorkspaceOpen)
     
-    if (_workspacePanelEl) {
-      console.log('[chat] 显示/隐藏工作区面板, display:', _leftWorkspaceOpen ? '' : 'none')
-      _workspacePanelEl.style.display = _leftWorkspaceOpen ? '' : 'none'
-      console.log('[chat] 面板实际display:', _workspacePanelEl.style.display)
-      console.log('[chat] 面板父元素:', _workspacePanelEl.parentElement?.tagName, _workspacePanelEl.parentElement?.className)
-    } else {
-      console.log('[chat] _workspacePanelEl is null!')
+    if (_leftWorkspacePanelEl) {
+      _leftWorkspacePanelEl.style.display = _leftWorkspaceOpen ? '' : 'none'
     }
     leftPanel.querySelector('#left-btn-chat-workspace')?.classList.toggle('is-active', _leftWorkspaceOpen)
     
     if (_leftWorkspaceOpen) {
-      _workspaceCurrentAgentId = parseSessionAgent(_sessionKey) || 'main'
-      console.log('[chat] 同步工作区上下文, agent:', _workspaceCurrentAgentId)
-      syncWorkspaceContext(true, _sessionKey)
+      _rightWorkspaceOpen = false
+      if (_rightWorkspacePanelEl) {
+        _rightWorkspacePanelEl.style.display = 'none'
+      }
+      document.querySelector('#split-btn-chat-workspace')?.classList.remove('is-active')
+      
+      _leftWorkspaceAgentId = parseSessionAgent(_sessionKey) || 'main'
+      loadSplitWorkspaceData('left', _leftWorkspaceAgentId)
     }
   })
   leftPanel.querySelector('#left-btn-cmd')?.addEventListener('click', () => toggleLeftCmdPanel())
   leftPanel.querySelector('#left-btn-reset-session')?.addEventListener('click', () => resetCurrentSession('left'))
   leftPanel.querySelector('#left-btn-refresh-models')?.addEventListener('click', () => loadModelOptions(true))
+  
+  const leftAttachBtn = leftPanel.querySelector('#left-attach-btn')
+  const leftFileInput = leftPanel.querySelector('#left-file-input')
+  const leftInput = leftPanel.querySelector('#left-input')
+  if (leftAttachBtn && leftFileInput) {
+    leftAttachBtn.addEventListener('click', () => leftFileInput.click())
+    leftFileInput.addEventListener('change', (e) => handleLeftFileSelect(e, leftPanel))
+  }
+  if (leftInput) {
+    leftInput.addEventListener('paste', (e) => handleLeftPaste(e, leftPanel))
+  }
   
   loadMainSessionForSplit()
 }
@@ -1730,7 +1931,15 @@ function setupRightPanelEvents() {
   if (!rightPanel) return
   
   rightPanel.querySelectorAll('[id]').forEach(el => {
-    if (el.tagName === 'BUTTON') return
+    if (el.tagName === 'BUTTON') {
+      if (el.id.startsWith('chat-')) {
+        el.id = el.id.replace('chat-', 'split-')
+      }
+      if (el.id.startsWith('btn-')) {
+        el.id = el.id.replace('btn-', 'split-btn-')
+      }
+      return
+    }
     if (el.id.startsWith('chat-')) {
       el.id = el.id.replace('chat-', 'split-')
     }
@@ -1773,19 +1982,36 @@ function setupRightPanelEvents() {
     
     _rightWorkspaceOpen = !_rightWorkspaceOpen
     
-    if (_workspacePanelEl) {
-      _workspacePanelEl.style.display = _rightWorkspaceOpen ? '' : 'none'
+    if (_rightWorkspacePanelEl) {
+      _rightWorkspacePanelEl.style.display = _rightWorkspaceOpen ? '' : 'none'
     }
     rightPanel.querySelector('#split-btn-chat-workspace')?.classList.toggle('is-active', _rightWorkspaceOpen)
     
     if (_rightWorkspaceOpen) {
-      _workspaceCurrentAgentId = parseSessionAgent(_splitSessionKey) || 'main'
-      syncWorkspaceContext(true, _splitSessionKey)
+      _leftWorkspaceOpen = false
+      if (_leftWorkspacePanelEl) {
+        _leftWorkspacePanelEl.style.display = 'none'
+      }
+      document.querySelector('#left-btn-chat-workspace')?.classList.remove('is-active')
+      
+      _rightWorkspaceAgentId = parseSessionAgent(_splitSessionKey) || 'main'
+      loadSplitWorkspaceData('right', _rightWorkspaceAgentId)
     }
   })
   rightPanel.querySelector('#split-btn-cmd')?.addEventListener('click', () => toggleRightCmdPanel())
   rightPanel.querySelector('#split-btn-reset-session')?.addEventListener('click', () => resetCurrentSession('right'))
   rightPanel.querySelector('#split-btn-refresh-models')?.addEventListener('click', () => loadModelOptions(true))
+  
+  const rightAttachBtn = rightPanel.querySelector('#split-attach-btn')
+  const rightFileInput = rightPanel.querySelector('#split-file-input')
+  const rightInput = rightPanel.querySelector('#split-input')
+  if (rightAttachBtn && rightFileInput) {
+    rightAttachBtn.addEventListener('click', () => rightFileInput.click())
+    rightFileInput.addEventListener('change', (e) => handleRightFileSelect(e, rightPanel))
+  }
+  if (rightInput) {
+    rightInput.addEventListener('paste', (e) => handleRightPaste(e, rightPanel))
+  }
   
   loadSplitSession()
 }
@@ -2056,25 +2282,25 @@ function handleSplitChatEvent(payload, state, runId) {
     if (isLeftTarget) {
       if (_loadingMainSession) {
         console.log('[chat] 跳过左侧 delta，因为正在加载会话')
-      } else {
-        if (!_leftCurrentAiBubble) {
-          const leftMessages = document.querySelector('#left-messages-area')
-          if (leftMessages) {
-            _leftCurrentAiBubble = document.createElement('div')
-            _leftCurrentAiBubble.className = 'msg msg-ai'
-            _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
-            leftMessages.appendChild(_leftCurrentAiBubble)
-          }
+        return
+      }
+      if (!_leftCurrentAiBubble) {
+        const leftMessages = document.querySelector('#left-messages-area')
+        if (leftMessages) {
+          _leftCurrentAiBubble = document.createElement('div')
+          _leftCurrentAiBubble.className = 'msg msg-ai'
+          _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
+          leftMessages.appendChild(_leftCurrentAiBubble)
         }
-        if (_leftCurrentAiBubble) {
-          if (!_leftIsStreaming) _leftIsStreaming = true
-          _leftCurrentAiText = text
-          if (c?.images?.length) _leftCurrentAiImages = c.images
-          if (c?.videos?.length) _leftCurrentAiVideos = c.videos
-          if (c?.audios?.length) _leftCurrentAiAudios = c.audios
-          if (c?.files?.length) _leftCurrentAiFiles = c.files
-          throttledSplitRender(true)
-        }
+      }
+      if (_leftCurrentAiBubble) {
+        if (!_leftIsStreaming) _leftIsStreaming = true
+        _leftCurrentAiText = text
+        if (c?.images?.length) _leftCurrentAiImages = c.images
+        if (c?.videos?.length) _leftCurrentAiVideos = c.videos
+        if (c?.audios?.length) _leftCurrentAiAudios = c.audios
+        if (c?.files?.length) _leftCurrentAiFiles = c.files
+        throttledSplitRender(true)
       }
     }
     
@@ -2981,6 +3207,114 @@ async function handlePaste(e) {
   }
 }
 
+// ── 左侧面板文件处理 ──
+
+async function handleLeftFileSelect(e, panel) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) { toast(t('chat.imageOnly'), 'warning'); continue }
+    if (file.size > 5 * 1024 * 1024) { toast(`${file.name} > 5MB`, 'warning'); continue }
+    try {
+      const base64 = await fileToBase64(file)
+      _leftAttachments.push({ type: 'image', mimeType: file.type, fileName: file.name, content: base64 })
+      renderLeftAttachments(panel)
+    } catch (e) { toast(`${t('chat.readFileFailed')} ${file.name}`, 'error') }
+  }
+  e.target.value = ''
+}
+
+async function handleLeftPaste(e, panel) {
+  const items = Array.from(e.clipboardData?.items || [])
+  const imageItems = items.filter(item => item.type.startsWith('image/'))
+  if (!imageItems.length) return
+  e.preventDefault()
+  for (const item of imageItems) {
+    const file = item.getAsFile()
+    if (!file) continue
+    if (file.size > 5 * 1024 * 1024) { toast(t('chat.imageSizeLimit'), 'warning'); continue }
+    try {
+      const base64 = await fileToBase64(file)
+      _leftAttachments.push({ type: 'image', mimeType: file.type || 'image/png', fileName: `paste-${Date.now()}.png`, content: base64 })
+      renderLeftAttachments(panel)
+    } catch (_) { toast(t('chat.readFileFailed'), 'error') }
+  }
+}
+
+function renderLeftAttachments(panel) {
+  const previewEl = panel.querySelector('#left-attachments-preview')
+  if (!previewEl) return
+  if (!_leftAttachments.length) { previewEl.style.display = 'none'; return }
+  previewEl.style.display = 'flex'
+  previewEl.innerHTML = _leftAttachments.map((att, idx) => `
+    <div class="chat-attachment-item">
+      <img src="data:${att.mimeType};base64,${att.content}" alt="${att.fileName}">
+      <button class="chat-attachment-del" data-idx="${idx}">×</button>
+    </div>
+  `).join('')
+  previewEl.querySelectorAll('.chat-attachment-del').forEach(btn => {
+    btn.onclick = () => {
+      const idx = parseInt(btn.dataset.idx)
+      _leftAttachments.splice(idx, 1)
+      renderLeftAttachments(panel)
+    }
+  })
+}
+
+// ── 右侧面板文件处理 ──
+
+async function handleRightFileSelect(e, panel) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) { toast(t('chat.imageOnly'), 'warning'); continue }
+    if (file.size > 5 * 1024 * 1024) { toast(`${file.name} > 5MB`, 'warning'); continue }
+    try {
+      const base64 = await fileToBase64(file)
+      _rightAttachments.push({ type: 'image', mimeType: file.type, fileName: file.name, content: base64 })
+      renderRightAttachments(panel)
+    } catch (e) { toast(`${t('chat.readFileFailed')} ${file.name}`, 'error') }
+  }
+  e.target.value = ''
+}
+
+async function handleRightPaste(e, panel) {
+  const items = Array.from(e.clipboardData?.items || [])
+  const imageItems = items.filter(item => item.type.startsWith('image/'))
+  if (!imageItems.length) return
+  e.preventDefault()
+  for (const item of imageItems) {
+    const file = item.getAsFile()
+    if (!file) continue
+    if (file.size > 5 * 1024 * 1024) { toast(t('chat.imageSizeLimit'), 'warning'); continue }
+    try {
+      const base64 = await fileToBase64(file)
+      _rightAttachments.push({ type: 'image', mimeType: file.type || 'image/png', fileName: `paste-${Date.now()}.png`, content: base64 })
+      renderRightAttachments(panel)
+    } catch (_) { toast(t('chat.readFileFailed'), 'error') }
+  }
+}
+
+function renderRightAttachments(panel) {
+  const previewEl = panel.querySelector('#split-attachments-preview')
+  if (!previewEl) return
+  if (!_rightAttachments.length) { previewEl.style.display = 'none'; return }
+  previewEl.style.display = 'flex'
+  previewEl.innerHTML = _rightAttachments.map((att, idx) => `
+    <div class="chat-attachment-item">
+      <img src="data:${att.mimeType};base64,${att.content}" alt="${att.fileName}">
+      <button class="chat-attachment-del" data-idx="${idx}">×</button>
+    </div>
+  `).join('')
+  previewEl.querySelectorAll('.chat-attachment-del').forEach(btn => {
+    btn.onclick = () => {
+      const idx = parseInt(btn.dataset.idx)
+      _rightAttachments.splice(idx, 1)
+      renderRightAttachments(panel)
+    }
+  })
+}
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -3428,6 +3762,29 @@ function toggleLeftCmdPanel() {
   if (cmdPanel.style.display === 'block') {
     cmdPanel.style.display = 'none'
   } else {
+    let html = ''
+    for (const group of COMMANDS) {
+      html += `<div class="cmd-group-title">${t(group.title)}</div>`
+      for (const c of group.commands) {
+        html += `<div class="cmd-item" data-cmd="${c.cmd}" data-action="${c.action}">
+          <span class="cmd-name">${c.cmd}</span>
+          <span class="cmd-desc">${t(c.desc)}</span>
+        </div>`
+      }
+    }
+    cmdPanel.innerHTML = html
+    cmdPanel.onclick = (e) => {
+      const item = e.target.closest('.cmd-item')
+      if (!item) return
+      cmdPanel.style.display = 'none'
+      if (item.dataset.action === 'fill') {
+        textarea.value = item.dataset.cmd
+        textarea.focus()
+      } else {
+        textarea.value = item.dataset.cmd
+        leftPanel.querySelector('#left-send-btn')?.click()
+      }
+    }
     textarea.value = '/'
     cmdPanel.style.display = 'block'
     textarea.focus()
@@ -3439,15 +3796,33 @@ function toggleRightCmdPanel() {
   if (!rightPanel) return
   const textarea = rightPanel.querySelector('#split-input')
   const cmdPanel = rightPanel.querySelector('#split-cmd-panel')
-  console.log('[chat] toggleRightCmdPanel:', { 
-    hasTextarea: !!textarea, 
-    hasCmdPanel: !!cmdPanel,
-    cmdPanelDisplay: cmdPanel?.style?.display
-  })
   if (!textarea || !cmdPanel) return
   if (cmdPanel.style.display === 'block') {
     cmdPanel.style.display = 'none'
   } else {
+    let html = ''
+    for (const group of COMMANDS) {
+      html += `<div class="cmd-group-title">${t(group.title)}</div>`
+      for (const c of group.commands) {
+        html += `<div class="cmd-item" data-cmd="${c.cmd}" data-action="${c.action}">
+          <span class="cmd-name">${c.cmd}</span>
+          <span class="cmd-desc">${t(c.desc)}</span>
+        </div>`
+      }
+    }
+    cmdPanel.innerHTML = html
+    cmdPanel.onclick = (e) => {
+      const item = e.target.closest('.cmd-item')
+      if (!item) return
+      cmdPanel.style.display = 'none'
+      if (item.dataset.action === 'fill') {
+        textarea.value = item.dataset.cmd
+        textarea.focus()
+      } else {
+        textarea.value = item.dataset.cmd
+        rightPanel.querySelector('#split-send-btn')?.click()
+      }
+    }
     textarea.value = '/'
     cmdPanel.style.display = 'block'
     textarea.focus()
