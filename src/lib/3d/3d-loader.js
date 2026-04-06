@@ -55,20 +55,17 @@ export class AvatarLoader {
               if (child.isMesh) {
                 modelOptimizer.optimizeMesh(child)
                 if (child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material = child.material.map(m => new THREE.MeshStandardMaterial({
-                      color: m.color || new THREE.Color(0xcccccc),
-                      map: m.map,
-                      roughness: m.roughness ?? 0.5,
-                      metalness: m.metalness ?? 0.1
-                    }))
-                  } else {
-                    child.material = new THREE.MeshStandardMaterial({
-                      color: child.material.color || new THREE.Color(0xcccccc),
-                      map: child.material.map,
-                      roughness: child.material.roughness ?? 0.5,
-                      metalness: child.material.metalness ?? 0.1
-                    })
+                  child.material.needsUpdate = true
+                  if (child.material.map) {
+                    child.material.map.needsUpdate = true
+                    console.log('[AvatarLoader] 纹理已更新:', child.material.map.name || '未命名')
+                    console.log('[AvatarLoader] 纹理尺寸:', child.material.map.image?.width, 'x', child.material.map.image?.height)
+                  }
+                  if (child.material.color) {
+                    console.log('[AvatarLoader] 材质颜色:', child.material.color.getHexString())
+                  }
+                  if (!child.material.map && !child.material.color) {
+                    console.log('[AvatarLoader] 材质没有纹理也没有颜色!')
                   }
                 }
               }
@@ -204,7 +201,7 @@ export class AvatarScene {
     const height = this.container.clientHeight || 400
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x1a1a2e)
+    this.scene.background = new THREE.Color(0x2a2a3e)
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
     this.camera.position.set(0, 1.5, 3)
@@ -218,18 +215,28 @@ export class AvatarScene {
     this.renderer.setSize(width, height)
     this.renderer.setPixelRatio(settings.pixelRatio)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.2
     this.container.appendChild(this.renderer.domElement)
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
     this.scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(2, 4, 3)
-    this.scene.add(directionalLight)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2)
+    keyLight.position.set(3, 4, 5)
+    this.scene.add(keyLight)
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3)
-    fillLight.position.set(-2, 1, -2)
+    const fillLight = new THREE.DirectionalLight(0xfff0e0, 0.5)
+    fillLight.position.set(-3, 2, 3)
     this.scene.add(fillLight)
+
+    const rimLight = new THREE.DirectionalLight(0xe0f0ff, 0.4)
+    rimLight.position.set(0, 3, -5)
+    this.scene.add(rimLight)
+
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.2)
+    bottomLight.position.set(0, -2, 0)
+    this.scene.add(bottomLight)
 
     this.addControls()
     this.startAnimationLoop()

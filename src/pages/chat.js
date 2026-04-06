@@ -678,8 +678,9 @@ function discardWorkspaceChanges() {
   updateWorkspaceEditorState()
 }
 
-function getCurrentWorkspaceAgentId() {
-  return parseSessionAgent(_sessionKey) || wsClient.snapshot?.sessionDefaults?.defaultAgentId || 'main'
+function getCurrentWorkspaceAgentId(sessionKey = null) {
+  const key = sessionKey || _sessionKey
+  return parseSessionAgent(key) || wsClient.snapshot?.sessionDefaults?.defaultAgentId || 'main'
 }
 
 function getWorkspaceAgentTitle() {
@@ -688,8 +689,8 @@ function getWorkspaceAgentTitle() {
   return _workspaceCurrentAgentId || t('chat.workspace')
 }
 
-async function syncWorkspaceContext(reload = true) {
-  const nextAgentId = getCurrentWorkspaceAgentId()
+async function syncWorkspaceContext(reload = true, targetSessionKey = null) {
+  const nextAgentId = targetSessionKey ? getCurrentWorkspaceAgentId(targetSessionKey) : getCurrentWorkspaceAgentId()
   const prevAgentId = _workspaceCurrentAgentId
   _workspaceCurrentAgentId = nextAgentId || 'main'
 
@@ -712,20 +713,21 @@ async function syncWorkspaceContext(reload = true) {
 }
 
 function applyWorkspacePanelVisibility(open, targetPanel = null) {
-  const toggleButtonActive = (btn) => {
-    if (btn) btn.classList.toggle('is-active', open)
+  const toggleButtonActive = (btn, isOpen) => {
+    if (btn) btn.classList.toggle('is-active', isOpen)
   }
   
   if (!targetPanel || targetPanel === 'main') {
     if (_workspacePanelEl) {
       _workspacePanelEl.style.display = open ? '' : 'none'
-      toggleButtonActive(_workspaceBtn)
+      toggleButtonActive(_workspaceBtn, open)
     }
   }
   
   const splitWrapper = document.querySelector('.chat-split-wrapper')
   if (splitWrapper) {
     if (!targetPanel || targetPanel === 'left') {
+      _leftWorkspaceOpen = open
       const leftPanel = splitWrapper.querySelector('#chat-split-left')
       if (leftPanel) {
         const leftPanelEl = leftPanel.querySelector('.chat-workspace-panel')
@@ -733,11 +735,12 @@ function applyWorkspacePanelVisibility(open, targetPanel = null) {
           leftPanelEl.style.display = open ? '' : 'none'
         }
         const leftBtn = leftPanel.querySelector('#left-btn-chat-workspace')
-        toggleButtonActive(leftBtn)
+        toggleButtonActive(leftBtn, open)
       }
     }
     
     if (!targetPanel || targetPanel === 'right') {
+      _rightWorkspaceOpen = open
       const rightPanel = splitWrapper.querySelector('#chat-split-right')
       if (rightPanel) {
         const rightPanelEl = rightPanel.querySelector('.chat-workspace-panel')
@@ -745,12 +748,20 @@ function applyWorkspacePanelVisibility(open, targetPanel = null) {
           rightPanelEl.style.display = open ? '' : 'none'
         }
         const rightBtn = rightPanel.querySelector('#split-btn-chat-workspace')
-        toggleButtonActive(rightBtn)
+        toggleButtonActive(rightBtn, open)
       }
     }
   }
   
-  if (open) syncWorkspaceContext(true)
+  if (open) {
+    const targetSession = targetPanel === 'left' ? _sessionKey : (targetPanel === 'right' ? _splitSessionKey : _sessionKey)
+    if (targetPanel === 'left') {
+      _workspaceCurrentAgentId = parseSessionAgent(_sessionKey) || 'main'
+    } else if (targetPanel === 'right') {
+      _workspaceCurrentAgentId = parseSessionAgent(_splitSessionKey) || 'main'
+    }
+    syncWorkspaceContext(true, targetSession)
+  }
 }
 
 function toggleWorkspacePanel(force) {
@@ -782,6 +793,11 @@ let _rightCurrentAiBubble = null
 let _rightCurrentAiText = ''
 let _rightLastRenderTime = 0
 let _rightRenderPending = false
+
+let _leftWorkspaceOpen = false
+let _rightWorkspaceOpen = false
+let _leftWorkspaceDirty = false
+let _rightWorkspaceDirty = false
 let _loadingSplitSession = false
 let _loadingMainSession = false
 let _leftCurrentAiImages = [], _leftCurrentAiVideos = [], _leftCurrentAiAudios = [], _leftCurrentAiFiles = []
@@ -1015,6 +1031,8 @@ function renderSplitView() {
     const leftContent = chatMain.cloneNode(true)
     leftContent.id = 'chat-main-left'
     leftContent.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;'
+    const leftChatHeader = leftContent.querySelector('.chat-header')
+    if (leftChatHeader) leftChatHeader.remove()
     const leftMessagesArea = leftContent.querySelector('#chat-messages-area')
     console.log('[chat] 克隆前左侧消息数量:', leftMessagesArea?.children.length)
     if (leftMessagesArea) leftMessagesArea.innerHTML = ''
@@ -1036,6 +1054,8 @@ function renderSplitView() {
     const rightContent = chatMain.cloneNode(true)
     rightContent.id = 'chat-main-right'
     rightContent.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;'
+    const rightChatHeader = rightContent.querySelector('.chat-header')
+    if (rightChatHeader) rightChatHeader.remove()
     const rightMessagesArea = rightContent.querySelector('#chat-messages-area')
     console.log('[chat] 克隆前右侧消息数量:', rightMessagesArea?.children.length)
     if (rightMessagesArea) rightMessagesArea.innerHTML = ''
@@ -1064,18 +1084,34 @@ function renderSplitView() {
 function createSplitPanelHeader(sessionKey, side) {
   const header = document.createElement('div')
   header.className = 'split-panel-header'
-  header.style.cssText = 'display:flex;align-items:center;padding:8px 12px;background:rgba(128,128,128,0.1);border-bottom:1px solid var(--border-primary);gap:8px;'
-  
-  const label = document.createElement('span')
-  label.style.cssText = 'font-size:11px;color:var(--text-secondary);flex-shrink:0;'
-  label.textContent = side === 'left' ? '当前' : '分屏'
+  header.style.cssText = 'display:flex;align-items:center;padding:6px 8px;background:rgba(128,128,128,0.08);border-bottom:1px solid var(--border-primary);gap:6px;'
   
   const selectWrapper = document.createElement('div')
   selectWrapper.id = `split-session-wrapper-${side}`
   selectWrapper.style.cssText = 'flex:1;min-width:0;'
   
-  header.appendChild(label)
+  const wsBtn = document.createElement('button')
+  wsBtn.className = 'btn btn-sm btn-ghost chat-workspace-trigger'
+  wsBtn.id = side === 'left' ? 'left-btn-chat-workspace' : 'split-btn-chat-workspace'
+  wsBtn.title = t('chat.openWorkspace')
+  wsBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>`
+  
+  const cmdBtn = document.createElement('button')
+  cmdBtn.className = 'btn btn-sm btn-ghost'
+  cmdBtn.id = side === 'left' ? 'left-btn-cmd' : 'split-btn-cmd'
+  cmdBtn.title = t('chat.shortcuts')
+  cmdBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H6a3 3 0 00-3 3 3 3 0 003 3 3 3 0 003-3V6a3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3h12a3 3 0 003-3 3 3 0 00-3-3z"/></svg>`
+  
+  const resetBtn = document.createElement('button')
+  resetBtn.className = 'btn btn-sm btn-ghost'
+  resetBtn.id = side === 'left' ? 'left-btn-reset-session' : 'split-btn-reset-session'
+  resetBtn.title = t('chat.resetSession')
+  resetBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>`
+  
   header.appendChild(selectWrapper)
+  header.appendChild(wsBtn)
+  header.appendChild(cmdBtn)
+  header.appendChild(resetBtn)
   
   return header
 }
@@ -1153,6 +1189,7 @@ async function switchMainSession(newKey) {
     _sessionKey = newKey
     localStorage.setItem('clawpanel-session-key', newKey)
     const msgs = await getLocalMessages(_sessionKey)
+    
     console.log('[chat] 切换主会话完成:', { newKey, count: msgs?.length, afterRenderCount: leftMessages.children.length })
     renderSessionMessages(msgs)
   } catch (e) {
@@ -1178,6 +1215,7 @@ async function switchSplitSession(newKey) {
   
   try {
     const msgs = await getLocalMessages(_splitSessionKey)
+    
     console.log('[chat] 切换分屏会话完成:', { newKey, count: msgs?.length, afterRenderCount: messages.children.length })
     renderSplitMessages(messages, msgs)
   } catch (e) {
@@ -1437,6 +1475,7 @@ function setupLeftPanelEvents() {
   if (!leftPanel) return
   
   leftPanel.querySelectorAll('[id]').forEach(el => {
+    if (el.tagName === 'BUTTON') return
     if (el.id.startsWith('chat-')) {
       el.id = el.id.replace('chat-', 'left-')
     }
@@ -1469,26 +1508,26 @@ function setupLeftPanelEvents() {
     })
   }
   
-  const workspaceBtn = leftPanel.querySelector('#left-btn-chat-workspace')
-  if (workspaceBtn) {
-    workspaceBtn.addEventListener('click', async (e) => {
-      e.stopPropagation()
-      if (getWorkspacePanelOpen() && _workspaceDirty) {
-        const yes = await confirmWorkspaceDiscardIfNeeded()
-        if (!yes) return
-        discardWorkspaceChanges()
-      }
-      const isOpen = workspaceBtn.classList.contains('is-active')
-      applyWorkspacePanelVisibility(!isOpen, 'left')
-    })
-  } else {
-    console.log('[chat] 工作区按钮未找到，ID可能被修改')
-    const allBtns = leftPanel.querySelectorAll('button')
-    allBtns.forEach((b, i) => {
-      console.log(`[chat] 按钮${i}: id="${b.id}", class="${b.className}", title="${b.title}"`)
-    })
-  }
-  
+  leftPanel.querySelector('#left-btn-chat-workspace')?.addEventListener('click', async (e) => {
+    e.stopPropagation()
+    if (_leftWorkspaceOpen && _leftWorkspaceDirty) {
+      const yes = await showConfirm(t('chat.confirmDiscardWorkspaceChanges'))
+      if (!yes) return
+      _leftWorkspaceDirty = false
+    }
+    
+    _leftWorkspaceOpen = !_leftWorkspaceOpen
+    
+    if (_workspacePanelEl) {
+      _workspacePanelEl.style.display = _leftWorkspaceOpen ? '' : 'none'
+    }
+    leftPanel.querySelector('#left-btn-chat-workspace')?.classList.toggle('is-active', _leftWorkspaceOpen)
+    
+    if (_leftWorkspaceOpen) {
+      _workspaceCurrentAgentId = parseSessionAgent(_sessionKey) || 'main'
+      syncWorkspaceContext(true, _sessionKey)
+    }
+  })
   leftPanel.querySelector('#left-btn-cmd')?.addEventListener('click', () => toggleLeftCmdPanel())
   leftPanel.querySelector('#left-btn-reset-session')?.addEventListener('click', () => resetCurrentSession('left'))
   leftPanel.querySelector('#left-btn-refresh-models')?.addEventListener('click', () => loadModelOptions(true))
@@ -1562,6 +1601,11 @@ async function sendLeftMessage(input, messages) {
   if (isSameSession && _splitOpen) {
     const rightMessages = document.querySelector('#split-messages-area')
     if (rightMessages && rightMessages !== messages) {
+      if (_loadingSplitSession) {
+        console.log('[chat] sendSplitMessage: 跳过右侧添加，因为正在加载会话')
+        return
+      }
+      console.log('[chat] sendSplitMessage: 向右侧添加用户消息和AI气泡')
       rightUserDiv = document.createElement('div')
       rightUserDiv.className = 'msg msg-user sending'
       rightUserDiv.dataset.msgId = msgId
@@ -1656,6 +1700,7 @@ function setupRightPanelEvents() {
   if (!rightPanel) return
   
   rightPanel.querySelectorAll('[id]').forEach(el => {
+    if (el.tagName === 'BUTTON') return
     if (el.id.startsWith('chat-')) {
       el.id = el.id.replace('chat-', 'split-')
     }
@@ -1688,20 +1733,26 @@ function setupRightPanelEvents() {
     })
   }
   
-  const rightWorkspaceBtn = rightPanel.querySelector('#split-btn-chat-workspace')
-  if (rightWorkspaceBtn) {
-    rightWorkspaceBtn.addEventListener('click', async (e) => {
-      e.stopPropagation()
-      if (getWorkspacePanelOpen() && _workspaceDirty) {
-        const yes = await confirmWorkspaceDiscardIfNeeded()
-        if (!yes) return
-        discardWorkspaceChanges()
-      }
-      const isOpen = rightWorkspaceBtn.classList.contains('is-active')
-      applyWorkspacePanelVisibility(!isOpen, 'right')
-    })
-  }
-  
+  rightPanel.querySelector('#split-btn-chat-workspace')?.addEventListener('click', async (e) => {
+    e.stopPropagation()
+    if (_rightWorkspaceOpen && _rightWorkspaceDirty) {
+      const yes = await showConfirm(t('chat.confirmDiscardWorkspaceChanges'))
+      if (!yes) return
+      _rightWorkspaceDirty = false
+    }
+    
+    _rightWorkspaceOpen = !_rightWorkspaceOpen
+    
+    if (_workspacePanelEl) {
+      _workspacePanelEl.style.display = _rightWorkspaceOpen ? '' : 'none'
+    }
+    rightPanel.querySelector('#split-btn-chat-workspace')?.classList.toggle('is-active', _rightWorkspaceOpen)
+    
+    if (_rightWorkspaceOpen) {
+      _workspaceCurrentAgentId = parseSessionAgent(_splitSessionKey) || 'main'
+      syncWorkspaceContext(true, _splitSessionKey)
+    }
+  })
   rightPanel.querySelector('#split-btn-cmd')?.addEventListener('click', () => toggleRightCmdPanel())
   rightPanel.querySelector('#split-btn-reset-session')?.addEventListener('click', () => resetCurrentSession('right'))
   rightPanel.querySelector('#split-btn-refresh-models')?.addEventListener('click', () => loadModelOptions(true))
@@ -1961,8 +2012,12 @@ const CHUNK_THRESHOLD = 50
 
 function handleSplitChatEvent(payload, state, runId) {
   const targetSession = payload.sessionKey || _splitSessionKey
-  const isLeftTarget = targetSession === _sessionKey
+  const isSplitModeActive = document.querySelector('#chat-split-wrapper') !== null
   const isRightTarget = targetSession === _splitSessionKey
+  const isLeftTarget = isSplitModeActive && targetSession === _sessionKey
+  const isMainTarget = !isSplitModeActive || (!isLeftTarget && !isRightTarget)
+  
+  console.log(`[chat] handleSplitChatEvent: state=${state}, targetSession=${targetSession}, isSplitModeActive=${isSplitModeActive}, isLeftTarget=${isLeftTarget}, isRightTarget=${isRightTarget}, isMainTarget=${isMainTarget}`)
   
   if (state === 'delta') {
     const c = extractChatContent(payload.message)
@@ -1971,54 +2026,64 @@ function handleSplitChatEvent(payload, state, runId) {
     if (isLeftTarget) {
       if (_loadingMainSession) {
         console.log('[chat] 跳过左侧 delta，因为正在加载会话')
-        return
-      }
-      if (!_leftCurrentAiBubble) {
-        const leftMessages = document.querySelector('#left-messages-area')
-        if (leftMessages) {
-          _leftCurrentAiBubble = document.createElement('div')
-          _leftCurrentAiBubble.className = 'msg msg-ai'
-          _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
-          leftMessages.appendChild(_leftCurrentAiBubble)
+      } else {
+        if (!_leftCurrentAiBubble) {
+          const leftMessages = document.querySelector('#left-messages-area')
+          if (leftMessages) {
+            _leftCurrentAiBubble = document.createElement('div')
+            _leftCurrentAiBubble.className = 'msg msg-ai'
+            _leftCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
+            leftMessages.appendChild(_leftCurrentAiBubble)
+          }
         }
-      }
-      if (_leftCurrentAiBubble) {
-        if (!_leftIsStreaming) _leftIsStreaming = true
-        _leftCurrentAiText = text
-        if (c?.images?.length) _leftCurrentAiImages = c.images
-        if (c?.videos?.length) _leftCurrentAiVideos = c.videos
-        if (c?.audios?.length) _leftCurrentAiAudios = c.audios
-        if (c?.files?.length) _leftCurrentAiFiles = c.files
-        throttledSplitRender(true)
+        if (_leftCurrentAiBubble) {
+          if (!_leftIsStreaming) _leftIsStreaming = true
+          _leftCurrentAiText = text
+          if (c?.images?.length) _leftCurrentAiImages = c.images
+          if (c?.videos?.length) _leftCurrentAiVideos = c.videos
+          if (c?.audios?.length) _leftCurrentAiAudios = c.audios
+          if (c?.files?.length) _leftCurrentAiFiles = c.files
+          throttledSplitRender(true)
+        }
       }
     }
     
     if (isRightTarget) {
-      if (_loadingSplitSession) {
-        console.log('[chat] 跳过右侧 delta，因为正在加载会话', { _loadingSplitSession, targetSession })
-        return
-      }
-      if (!_rightCurrentAiBubble) {
-        const splitMessages = document.querySelector('#split-messages-area')
-        if (splitMessages) {
-          console.log('[chat] 创建右侧 AI 气泡')
-          _rightCurrentAiBubble = document.createElement('div')
-          _rightCurrentAiBubble.className = 'msg msg-ai'
-          _rightCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
-          splitMessages.appendChild(_rightCurrentAiBubble)
+      if (!_loadingSplitSession) {
+        if (!_rightCurrentAiBubble) {
+          const splitMessages = document.querySelector('#split-messages-area')
+          if (splitMessages) {
+            _rightCurrentAiBubble = document.createElement('div')
+            _rightCurrentAiBubble.className = 'msg msg-ai'
+            _rightCurrentAiBubble.innerHTML = `<div class="msg-bubble"><div class="msg-text"></div></div>`
+            splitMessages.appendChild(_rightCurrentAiBubble)
+          }
+        }
+        if (_rightCurrentAiBubble) {
+          if (!_rightIsStreaming) _rightIsStreaming = true
+          _rightCurrentAiText = text
+          if (c?.images?.length) _rightCurrentAiImages = c.images
+          if (c?.videos?.length) _rightCurrentAiVideos = c.videos
+          if (c?.audios?.length) _rightCurrentAiAudios = c.audios
+          if (c?.files?.length) _rightCurrentAiFiles = c.files
+          throttledSplitRender(false)
         }
       }
-      if (_rightCurrentAiBubble) {
-        if (!_rightIsStreaming) _rightIsStreaming = true
-        _rightCurrentAiText = text
-        if (c?.images?.length) _rightCurrentAiImages = c.images
-        if (c?.videos?.length) _rightCurrentAiVideos = c.videos
-        if (c?.audios?.length) _rightCurrentAiAudios = c.audios
-        if (c?.files?.length) _rightCurrentAiFiles = c.files
-        throttledSplitRender(false)
+    }
+    
+    if (isMainTarget) {
+      _cancelResponseWatchdog()
+      if (!_currentAiBubble) {
+        const result = createStreamBubble()
+        _currentAiBubble = result.bubble
+        _currentAiTextSpan = result.textSpan
+        _isStreaming = true
+      }
+      if (_currentAiBubble) {
+        _currentAiText = text
+        throttledRender()
       }
     }
-    return
   }
   
   if (state === 'final') {
@@ -2049,11 +2114,7 @@ function handleSplitChatEvent(payload, state, runId) {
     _rightIsStreaming = false
     
     if (isLeftTarget) {
-      if (_loadingMainSession) {
-        console.log('[chat] 跳过左侧 final，因为正在加载会话')
-        return
-      }
-      if (_leftCurrentAiBubble) {
+      if (!_loadingMainSession && _leftCurrentAiBubble) {
         const chunkText = _leftCurrentAiText || finalText
         _leftCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
         appendImagesToEl(_leftCurrentAiBubble, _leftCurrentAiImages)
@@ -2082,11 +2143,7 @@ function handleSplitChatEvent(payload, state, runId) {
     }
     
     if (isRightTarget) {
-      if (_loadingSplitSession) {
-        console.log('[chat] 跳过右侧 final，因为正在加载会话')
-        return
-      }
-      if (_rightCurrentAiBubble) {
+      if (!_loadingSplitSession && _rightCurrentAiBubble) {
         const chunkText = _rightCurrentAiText || finalText
         _rightCurrentAiBubble.querySelector('.msg-text').innerHTML = renderMarkdown(chunkText)
         appendImagesToEl(_rightCurrentAiBubble, _rightCurrentAiImages)
@@ -2112,6 +2169,51 @@ function handleSplitChatEvent(payload, state, runId) {
           if (timeEl) timeEl.textContent = formatTime(Date.now())
         })
       }
+    }
+    
+    if (isMainTarget) {
+      console.log('[chat] 主屏 final 处理, finalText 长度:', finalText.length)
+      showTyping(false)
+      if (!_currentAiBubble && (finalText || finalImages.length || finalVideos.length || finalAudios.length || finalFiles.length)) {
+        const result = createStreamBubble()
+        _currentAiBubble = result.bubble
+        _currentAiTextSpan = result.textSpan
+      }
+      if (_currentAiBubble) {
+        if (finalText) {
+          if (_currentAiTextSpan && finalText.startsWith(_currentAiText || '')) {
+            _currentAiTextSpan.textContent = finalText
+          } else {
+            _currentAiBubble.innerHTML = renderMarkdown(finalText)
+          }
+        }
+        appendImagesToEl(_currentAiBubble, finalImages)
+        appendVideosToEl(_currentAiBubble, finalVideos)
+        appendAudiosToEl(_currentAiBubble, finalAudios)
+        appendFilesToEl(_currentAiBubble, finalFiles)
+        _messagesEl.scrollTop = _messagesEl.scrollHeight
+        _currentAiBubble = null
+        _currentAiTextSpan = null
+        _currentAiText = ''
+        _currentAiImages = []
+        _currentAiVideos = []
+        _currentAiAudios = []
+        _currentAiFiles = []
+      }
+      _isStreaming = false
+      _isSending = false
+      updateSendState()
+      
+      _messagesEl.querySelectorAll('.msg-user.sending').forEach(el => {
+        el.classList.remove('sending')
+        const timeEl = el.querySelector('.msg-time')
+        if (timeEl) timeEl.textContent = formatTime(Date.now())
+      })
+      return
+    }
+    
+    if (!isLeftTarget && !isRightTarget && !isMainTarget) {
+      console.log('[chat] final 未匹配任何目标:', { targetSession, _sessionKey, _splitSessionKey, isLeftTarget, isRightTarget, isMainTarget })
     }
     
     if (finalText) {
@@ -2955,6 +3057,7 @@ async function connectGateway() {
     })
 
     _unsubEvent = wsClient.onEvent((msg) => {
+      console.log('[chat] onEvent 收到消息, _pageActive=', _pageActive)
       if (!_pageActive) return
       handleEvent(msg)
     })
@@ -3409,7 +3512,10 @@ function handleEvent(msg) {
     }
   }
 
-  if (event === 'chat') handleChatEvent(payload)
+  if (event === 'chat') {
+    console.log('[chat] handleEvent: event=chat，准备调用 handleChatEvent')
+    handleChatEvent(payload)
+  }
 
   // Compaction 状态指示：上游 2026.3.12 新增 status_reaction 事件
   if (event === 'chat.status_reaction' || event === 'status_reaction') {
@@ -3426,22 +3532,25 @@ function handleChatEvent(payload) {
   const { state } = payload
   const runId = payload.runId
   
+  if (state === 'error') {
+    console.log('[chat] 收到 error 事件, payload:', JSON.stringify(payload)?.substring(0, 500))
+    showTyping(false)
+    appendSystemMessage(`${t('chat.sendFailed')}${payload.error?.message || payload.error?.code || '服务端错误'}`)
+    resetStreamState()
+    _isSending = false
+    updateSendState()
+    return
+  }
+  
+  console.log('[chat] handleChatEvent 被调用, state=', state, ', session=', payload.sessionKey, ', _sessionKey=', _sessionKey)
+  handleSplitChatEvent(payload, state, runId)
+  return
+
+  // 以下是原有的非分屏处理逻辑，现在统一走 handleSplitChatEvent
   const isSplitMode = _splitOpen && _splitSessionKey
   const isEventForSplit = isSplitMode && payload.sessionKey && payload.sessionKey === _splitSessionKey
   const isEventForMain = payload.sessionKey && payload.sessionKey === _sessionKey
   const isSameSession = isSplitMode && payload.sessionKey === _sessionKey
-  
-  if (isSplitMode) {
-    const domExists = document.querySelector('#chat-split-wrapper') !== null
-    if (domExists) {
-      handleSplitChatEvent(payload, state, runId)
-      if (isSameSession) {
-        return
-      }
-    } else {
-      console.log('[chat] 分屏已关闭但状态未刷新，正常处理为主会话')
-    }
-  }
   
   console.log(`[chat] handleChatEvent: event.session=${payload.sessionKey}, _sessionKey=${_sessionKey}, _splitSessionKey=${_splitSessionKey}, isSplitMode=${isSplitMode}, isEventForMain=${isEventForMain}`)
   
